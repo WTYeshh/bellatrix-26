@@ -153,15 +153,6 @@ async def get_dashboard_summary(
     else:
         host_status = "Configured Host (Awaiting Telemetry)"
 
-    if active_incidents and len(active_incidents) > 0 and len(rec_list) > 0:
-        maturity_stage = "Stage 4: Recommend"
-    elif len(metric_records) > 10:
-        maturity_stage = "Stage 2: Baseline"
-    elif len(metric_records) > 0:
-        maturity_stage = "Stage 1: Ingest"
-    else:
-        maturity_stage = "Stage 0: Unconfigured"
-
     # 6. Recommendations
     rec_list = []
     if active_incidents:
@@ -175,6 +166,15 @@ async def get_dashboard_summary(
             "text": "All operational baselines nominal across connected collectors.",
             "reason": "Telemetry signals are within historical ±2.5σ tolerance limits."
         })
+
+    if active_incidents and len(active_incidents) > 0 and len(rec_list) > 0:
+        maturity_stage = "Stage 4: Recommend"
+    elif len(metric_records) > 10:
+        maturity_stage = "Stage 2: Baseline"
+    elif len(metric_records) > 0:
+        maturity_stage = "Stage 1: Ingest"
+    else:
+        maturity_stage = "Stage 0: Unconfigured"
 
     return DashboardSummary(
         health_state=overall_health,

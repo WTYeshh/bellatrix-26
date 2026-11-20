@@ -2,6 +2,10 @@
 # AEGIS Privacy-First AIOps Observability SaaS — Master Startup Script
 # Starts: 1. FastAPI Backend (8000) -> 2. Tier 1 Collector -> 3. Frontend (3000)
 # ==============================================================================
+param(
+    [switch]$NoWait,
+    [switch]$Detached
+)
 
 $ErrorActionPreference = "Continue"
 
@@ -38,15 +42,16 @@ Start-Sleep -Seconds 1
 
 # 3. Start FastAPI Backend (Port 8000)
 Write-Host "`n[1/3] Launching FastAPI Backend on http://127.0.0.1:8000..." -ForegroundColor Cyan
-$backendLog = Join-Path $rootPath "backend.log"
+$backendOut = Join-Path $rootPath "backend_out.log"
+$backendErr = Join-Path $rootPath "backend_err.log"
 $backendProcess = Start-Process -FilePath $pythonCmd `
     -ArgumentList "-m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000 --reload" `
     -WorkingDirectory $rootPath `
-    -RedirectStandardOutput $backendLog `
-    -RedirectStandardError $backendLog `
+    -RedirectStandardOutput $backendOut `
+    -RedirectStandardError $backendErr `
     -PassThru
 
-Write-Host "  -> Backend process spawned (PID $($backendProcess.Id)). Log: $backendLog" -ForegroundColor Gray
+Write-Host "  -> Backend process spawned (PID $($backendProcess.Id)). Log: $backendOut" -ForegroundColor Gray
 
 # Wait for backend health check
 $backendReady = $false
@@ -65,22 +70,23 @@ for ($i = 1; $i -le 15; $i++) {
 }
 
 if (-not $backendReady) {
-    Write-Host "[ERROR] Backend failed to become healthy. Check backend.log:" -ForegroundColor Red
-    Get-Content $backendLog -Tail 20
+    Write-Host "[ERROR] Backend failed to become healthy. Check backend_err.log:" -ForegroundColor Red
+    if (Test-Path $backendErr) { Get-Content $backendErr -Tail 20 }
     exit 1
 }
 
 # 4. Start Real Windows Python Collector
 Write-Host "`n[2/3] Launching Tier 1 Windows psutil Collector..." -ForegroundColor Cyan
-$collectorLog = Join-Path $rootPath "collector.log"
+$collectorOut = Join-Path $rootPath "collector_out.log"
+$collectorErr = Join-Path $rootPath "collector_err.log"
 $collectorProcess = Start-Process -FilePath $pythonCmd `
     -ArgumentList "-m collector.main" `
     -WorkingDirectory $rootPath `
-    -RedirectStandardOutput $collectorLog `
-    -RedirectStandardError $collectorLog `
+    -RedirectStandardOutput $collectorOut `
+    -RedirectStandardError $collectorErr `
     -PassThru
 
-Write-Host "  -> Collector process spawned (PID $($collectorProcess.Id)). Log: $collectorLog" -ForegroundColor Gray
+Write-Host "  -> Collector process spawned (PID $($collectorProcess.Id)). Log: $collectorOut" -ForegroundColor Gray
 
 # Wait for collector initial cycle
 Start-Sleep -Seconds 3
@@ -101,15 +107,16 @@ try {
 # 5. Start Frontend HTTP Server (Port 3000)
 Write-Host "`n[3/3] Launching Vanilla ES6+ Frontend on http://127.0.0.1:3000..." -ForegroundColor Cyan
 $frontendDir = Join-Path $rootPath "frontend"
-$frontendLog = Join-Path $rootPath "frontend.log"
+$frontendOut = Join-Path $rootPath "frontend_out.log"
+$frontendErr = Join-Path $rootPath "frontend_err.log"
 $frontendProcess = Start-Process -FilePath $pythonCmd `
     -ArgumentList "-m http.server 3000 --directory `"$frontendDir`"" `
     -WorkingDirectory $rootPath `
-    -RedirectStandardOutput $frontendLog `
-    -RedirectStandardError $frontendLog `
+    -RedirectStandardOutput $frontendOut `
+    -RedirectStandardError $frontendErr `
     -PassThru
 
-Write-Host "  -> Frontend server spawned (PID $($frontendProcess.Id)). Log: $frontendLog" -ForegroundColor Gray
+Write-Host "  -> Frontend server spawned (PID $($frontendProcess.Id)). Log: $frontendOut" -ForegroundColor Gray
 Start-Sleep -Seconds 1
 
 Write-Host ""
@@ -131,3 +138,15 @@ Write-Host "    Frontend:  PID $($frontendProcess.Id)" -ForegroundColor Gray
 Write-Host ""
 Write-Host "  To stop all services, run: .\stop_aegis.ps1" -ForegroundColor Cyan
 Write-Host "======================================================================" -ForegroundColor Green
+
+if (-not $NoWait -and -not $Detached) {
+    Write-Host "`n[AEGIS active] All services running. Press Ctrl+C anytime to stop all AEGIS services..." -ForegroundColor Cyan
+    try {
+        while ($true) {
+            Start-Sleep -Seconds 2
+        }
+    } finally {
+        Write-Host "`nStopping AEGIS services..." -ForegroundColor Yellow
+        & (Join-Path $rootPath "stop_aegis.ps1")
+    }
+}

@@ -42,32 +42,47 @@ AEGIS is an enterprise-grade, privacy-first AIOps observability SaaS platform th
 
 ## 🚀 Running AEGIS
 
-### 1. Start the Tier 2 Central SaaS Backend
+### Automated One-Click Windows Startup (Recommended)
+You can launch the complete AEGIS ecosystem (FastAPI Backend, Tier 1 Windows psutil Collector, and Frontend) in order with full health validation using the included PowerShell script:
+```powershell
+# In PowerShell:
+.\start_aegis.ps1
+```
+To stop all AEGIS services gracefully:
+```powershell
+.\stop_aegis.ps1
+```
+
+---
+
+### Manual Step-by-Step Startup
+
+#### 1. Start the Tier 2 Central SaaS Backend
 ```bash
 # In project root:
 python -m uvicorn backend.app.main:app --host 0.0.0.0 --port 8000
 ```
-- API Documentation (Swagger): `http://localhost:8000/docs`
-- Health check: `http://localhost:8000/health`
+- API Documentation (Swagger): `http://localhost:8000/docs` or `http://127.0.0.1:8000/docs`
+- Health check: `http://localhost:8000/health` (Performs genuine `SELECT 1` database verification)
 
-### 2. Start the Frontend Dashboard
+#### 2. Start the Frontend Dashboard
 ```bash
-cd frontend
-python -m http.server 3000
-# Open http://localhost:3000 in your browser
+# Serve frontend on port 3000:
+python -m http.server 3000 --directory frontend
+# Open http://localhost:3000 or http://127.0.0.1:3000 in your browser
 ```
 Default credentials: `admin@aegis.io` / `aegis2026`
 
-### 3. Run the Tier 1 Local Collector
+#### 3. Run the Tier 1 Local Collector (Real Windows Hardware Monitoring)
 ```bash
-# Run one transmission cycle:
-python collector/run_once.py
+# Run continuous collector daemon (5s telemetry, 15s heartbeat):
+python -u -m collector.main
 
-# Or run the continuous collector daemon:
-python collector/main.py
+# Or run a single manual collection & transmission cycle:
+python collector/run_once.py
 ```
 
-### 4. Run the Automated Test Suite (17 Tests)
+#### 4. Run the Full Automated Test Suite (38 Tests)
 ```bash
 python -m pytest tests -v
 ```
