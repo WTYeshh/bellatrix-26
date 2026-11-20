@@ -41,10 +41,34 @@ const AegisApp = (() => {
         setupSidebar();
         setupRoutes();
         initEventStream();
+        initAutoRefreshPolling();
 
         // Navigate to hash or default
         const hash = window.location.hash.slice(1) || 'command-center';
         AegisRouter.navigate(hash);
+    }
+
+    function initAutoRefreshPolling() {
+        if (window._aegisPollInterval) return;
+        window._aegisPollInterval = setInterval(async () => {
+            if (document.hidden) return;
+            const page = AegisRouter.getCurrentPage();
+            try {
+                if (page === 'command-center' && typeof CommandCenter !== 'undefined' && CommandCenter.loadData) {
+                    await CommandCenter.loadData();
+                } else if (page === 'infrastructure' && typeof InfraMonitoring !== 'undefined' && InfraMonitoring.load) {
+                    await InfraMonitoring.load();
+                } else if (page === 'network' && typeof NetworkMonitoring !== 'undefined' && NetworkMonitoring.load) {
+                    await NetworkMonitoring.load();
+                } else if (page === 'security' && typeof SecurityMonitoring !== 'undefined' && SecurityMonitoring.load) {
+                    await SecurityMonitoring.load();
+                } else if (page === 'collectors' && typeof CollectorManagement !== 'undefined' && CollectorManagement.load) {
+                    await CollectorManagement.load();
+                }
+            } catch (err) {
+                // Polling error silently suppressed
+            }
+        }, 3500);
     }
 
     function initEventStream() {
