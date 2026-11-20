@@ -1,7 +1,8 @@
 # AEGIS — Evaluation Checklist Tracker
 
-> Last Verified: 2026-11-20T22:52:00Z
-> Test Suite: 32 Passed / 32 Total (100% Automated Test Pass Rate across 5 test suites)
+> Last Verified: 2026-11-21T02:15:00Z
+> Test Suite: 54 Passed / 54 Total (100% Automated Test Pass Rate across 9 test suites)
+> 16 Mandatory Hackathon Scenarios: 16 Passed / 16 Total (tests/test_all_16_hackathon_scenarios.py)
 
 ## Scoring Summary
 
@@ -110,6 +111,27 @@
 | 4.6 | TEST 6 — Multiple related alerts | ✅ DEMONSTRATED LIVE | `tests/test_live_scenarios.py::test_scenario_6` PASSED |
 | 4.7 | TEST 7 — Duplicate/out-of-order events | ✅ DEMONSTRATED LIVE | `tests/test_live_scenarios.py::test_scenario_7` PASSED |
 | 4.8 | TEST 8 — Remediation proposed | ✅ DEMONSTRATED LIVE | `tests/test_live_scenarios.py::test_scenario_8` PASSED |
+
+### 16 Official Evaluation Live Test Scenarios (`tests/test_all_16_hackathon_scenarios.py`)
+
+| Scenario | Objective | Status | Implementation & Validation |
+| :--- | :--- | :---: | :--- |
+| **Scenario 1** | Real Windows CPU increase | ✅ PASSED | `CPUMonitor` reads baseline, safe compute load executed, delta measured |
+| **Scenario 2** | Real Windows memory increase | ✅ PASSED | `MemoryMonitor` buffers buffer chunk, measures RAM delta, releases memory |
+| **Scenario 3** | Disk utilization change | ✅ PASSED | `DiskMonitor` discovers partitions and calculates write throughput |
+| **Scenario 4** | Network latency increase | ✅ PASSED | `NetworkMonitor` socket probe captures real connect latency |
+| **Scenario 5** | Packet loss where measurable | ✅ PASSED | `NetworkMonitor` probe handles unreachable target with 100% loss reporting |
+| **Scenario 6** | Repeated failed-login signals | ✅ PASSED | `SecurityMonitor` aggregates 7 failures, triggers High/Critical severity spike |
+| **Scenario 7** | Collector stops sending heartbeats | ✅ PASSED | Collector heartbeat > 60s silence detected, marked as Offline |
+| **Scenario 8** | SaaS endpoint becomes unreachable | ✅ PASSED | `SaaSClient` catches unreachable backend port gracefully without crash |
+| **Scenario 9** | Local buffering and reconnection | ✅ PASSED | `LocalCollectorStorage` queues outbox in SQLite, backlog drained on replay |
+| **Scenario 10** | Duplicate payload delivery | ✅ PASSED | Server detects duplicate payload ID, returns `duplicate=True` idempotently |
+| **Scenario 11** | Out-of-order event delivery | ✅ PASSED | Ingesting T2 then T1 preserves true event-time chronological ordering |
+| **Scenario 12** | Raw log containing fake secret | ✅ PASSED | Passwords, tokens, and keys scrubbed to `[REDACTED_SECRET]` |
+| **Scenario 13** | Privacy redaction and allowlist | ✅ PASSED | Strict field allow-list drops all unapproved keys into `dropped_fields` |
+| **Scenario 14** | Exact Egress Proof verification | ✅ PASSED | SHA-256 hash calculated over canonical JSON, matched by SaaS backend |
+| **Scenario 15** | Multi-alert correlation (Incident DNA)| ✅ PASSED | Multi-signal spikes grouped into single unified Incident |
+| **Scenario 16** | Safe remediation simulation | ✅ PASSED | Human approval required, policy checked, sandbox simulation & rollback stored |
 
 ### Performance Targets
 
