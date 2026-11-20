@@ -147,38 +147,35 @@ async def process_ingestion_payload(
         if collector.pending_buffered > 0:
             collector.pending_buffered = max(0, collector.pending_buffered - 1)
 
-    # 7. AIOps Detection Pipeline
-    anomalies_detected = []
-    for metric_name, val in [
-        ("cpu_usage", payload.cpu_usage),
-        ("memory_usage", payload.memory_usage),
-        ("disk_usage", payload.disk_usage),
-        ("latency_ms", payload.latency_ms or 0.0),
-        ("packet_loss_pct", payload.packet_loss_pct or 0.0),
-    ]:
-        anomaly = aiops_engine.detect_statistical_anomaly(
+    # 7. AIOps Detection Pipeline: Multi-signal baselines, sudden shift, and multivariate ML
+    full_payload_data = {
+        "source_id": payload.source_id,
+        "cpu_usage": payload.cpu_usage,
+        "memory_usage": payload.memory_usage,
+        "disk_usage": payload.disk_usage,
+        "latency_ms": payload.latency_ms or 0.0,
+        "packet_loss_pct": payload.packet_loss_pct or 0.0,
+        "throughput_kbps": payload.throughput_kbps or 0.0
+    }
+    anomalies_detected = aiops_engine.analyze_payload(payload.tenant_id, full_payload_data)
+
+    for anomaly in anomalies_detected:
+        metric_name = anomaly.get("metric", "telemetry")
+        anom_id = f"ANOM-{int(now_utc.timestamp())}-{metric_name}"
+        anom_record = AnomalyRecord(
+            anomaly_id=anom_id,
             tenant_id=payload.tenant_id,
             source_id=payload.source_id,
             metric=metric_name,
-            current_value=val
+            observed_value=anomaly.get("observed_value", 0.0),
+            baseline_value=anomaly.get("baseline_value", 0.0),
+            anomaly_score=anomaly.get("anomaly_score", 0.5),
+            severity=anomaly.get("severity", "Medium"),
+            reason=anomaly.get("reason", "AIOps anomaly detected"),
+            contributing_signals=json.dumps(anomaly.get("contributing_signals", [])),
+            timestamp_utc=now_utc
         )
-        if anomaly:
-            anomalies_detected.append(anomaly)
-            anom_id = f"ANOM-{int(now_utc.timestamp())}-{metric_name}"
-            anom_record = AnomalyRecord(
-                anomaly_id=anom_id,
-                tenant_id=payload.tenant_id,
-                source_id=payload.source_id,
-                metric=metric_name,
-                observed_value=anomaly["observed_value"],
-                baseline_value=anomaly["baseline_value"],
-                anomaly_score=anomaly["anomaly_score"],
-                severity=anomaly["severity"],
-                reason=anomaly["reason"],
-                contributing_signals=json.dumps(anomaly["contributing_signals"]),
-                timestamp_utc=now_utc
-            )
-            db.add(anom_record)
+        db.add(anom_record)
 
     # 8. Incident DNA Alert Correlation
     if anomalies_detected:

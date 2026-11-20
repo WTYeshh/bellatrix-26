@@ -28,6 +28,10 @@ class UnifiedAIOpsEngine:
     def calculate_statistical_baseline(self, tenant_id: str, source_id: str, metric: str) -> Dict[str, float]:
         return self.baseline_engine.get_baseline(tenant_id, source_id, metric)
 
+    def analyze_payload(self, tenant_id: str, payload: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Multi-variate and multi-signal complete payload analysis."""
+        return self.anomaly_engine.analyze(tenant_id, payload)
+
     def detect_statistical_anomaly(
         self,
         tenant_id: str,

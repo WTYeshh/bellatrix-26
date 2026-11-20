@@ -127,6 +127,69 @@ def test_explainable_recommendation():
     assert "Inspect thread counts" in rec["suggested_action"]
     print("✅ Explainable AI recommendation verified.")
 
+@pytest.mark.asyncio
+async def test_end_to_end_automated_aiops_ingestion():
+    """TEST: Full end-to-end automated AIOps execution on payload ingestion."""
+    from backend.app.database import engine, Base, AsyncSessionLocal
+    from backend.app.ingestion.pipeline import process_ingestion_payload
+    from backend.app.models import AnomalyRecord, Incident
+    from backend.app.aiops.engine import aiops_engine
+    from sqlalchemy.future import select
+    import uuid
+    import datetime
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+    tenant = "ORG_E2E_AIOPS"
+    source = "NODE_SRV_99"
+
+    # Establish normal baseline
+    for i in range(12):
+        aiops_engine.record_observation(tenant, source, "cpu_usage", 40.0 + (i % 3))
+        aiops_engine.record_observation(tenant, source, "latency_ms", 20.0 + (i % 2))
+
+    # Ingest a severe multi-signal anomaly payload
+    payload = {
+        "payload_id": f"P-E2E-{uuid.uuid4()}",
+        "tenant_id": tenant,
+        "source_id": source,
+        "collector_id": "COLLECTOR_001",
+        "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+        "cpu_usage": 98.0,
+        "memory_usage": 88.0,
+        "disk_usage": 45.0,
+        "latency_ms": 350.0,
+        "packet_loss_pct": 5.0,
+        "throughput_kbps": 120.0,
+        "health_state": "Poor"
+    }
+
+    async with AsyncSessionLocal() as session:
+        ack = await process_ingestion_payload(payload, session)
+        assert ack.status == "Delivered"
+        assert ack.verified is True
+
+        # Verify automated AnomalyRecords created in DB
+        anoms = (await session.execute(
+            select(AnomalyRecord).where(AnomalyRecord.tenant_id == tenant)
+        )).scalars().all()
+        assert len(anoms) >= 1
+        metrics_flagged = [a.metric for a in anoms]
+        assert "cpu_usage" in metrics_flagged or "latency_ms" in metrics_flagged
+
+        # Verify Incident DNA correlated into an Incident
+        incs = (await session.execute(
+            select(Incident).where(Incident.tenant_id == tenant)
+        )).scalars().all()
+        assert len(incs) >= 1
+        latest_inc = incs[-1]
+        assert latest_inc.severity in ["High", "Critical"]
+        assert source in latest_inc.affected_collectors
+        assert latest_inc.confidence >= 0.85
+
+    print("✅ Automated end-to-end AIOps ingestion and Incident DNA correlation verified.")
+
 if __name__ == "__main__":
     test_statistical_baselines_and_zscore()
     test_isolation_forest_ml_scoring()
