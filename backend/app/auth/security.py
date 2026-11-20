@@ -47,7 +47,8 @@ async def get_current_user(
         )
     token = auth.credentials
     if token.startswith("demo-token"):
-        stmt = select(User).where(User.email == "admin@aegis.io")
+        email = "admin@globex.io" if "globex" in token else "admin@aegis.io"
+        stmt = select(User).where(User.email == email)
         user = (await db.execute(stmt)).scalar_one_or_none()
         if user:
             return user

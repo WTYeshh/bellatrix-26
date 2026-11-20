@@ -89,6 +89,51 @@ async def seed_initial_data():
             await session.commit()
             print("[AEGIS Backend] Seeded initial organization ORG_001 and demo users.")
 
+        # Check if secondary isolated organization exists (for multi-tenant testing)
+        res2 = await session.execute(select(Organization).where(Organization.tenant_id == "ORG_002"))
+        if not res2.scalar_one_or_none():
+            org2 = Organization(
+                tenant_id="ORG_002",
+                name="Globex Industries",
+                region="eu-west-1",
+                timezone="UTC"
+            )
+            session.add(org2)
+            u2 = User(
+                tenant_id="ORG_002",
+                email="admin@globex.io",
+                password_hash=hash_password("GlobexPass2026!"),
+                full_name="Hank Scorpio",
+                role="Organization Owner",
+                is_active=True
+            )
+            session.add(u2)
+            col2 = Collector(
+                collector_id="COLLECTOR_GLOBEX_01",
+                tenant_id="ORG_002",
+                host_identifier="globex-core-prod-01",
+                version="1.0.0",
+                status="Online",
+                auth_token="globex-collector-token-001",
+                os_info="Ubuntu 22.04 LTS",
+                cpu_usage=18.5,
+                memory_usage=42.0,
+                pending_buffered=0,
+                last_heartbeat=datetime.datetime.now(datetime.timezone.utc)
+            )
+            session.add(col2)
+            pol2 = PrivacyPolicy(
+                tenant_id="ORG_002",
+                version="v1.0",
+                name="Globex Strict Allow-List",
+                allowed_fields=str(list(STRICT_ALLOWED_FIELDS)),
+                redaction_rules="{}",
+                is_active=True
+            )
+            session.add(pol2)
+            await session.commit()
+            print("[AEGIS Backend] Seeded secondary isolated organization ORG_002 (Globex Industries).")
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
