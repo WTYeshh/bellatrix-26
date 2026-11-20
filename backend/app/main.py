@@ -152,22 +152,44 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Enable CORS for frontend integration
+# Enable CORS for frontend integration with explicit origins (W3C credentials compliant)
+ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:8000",
+    "http://127.0.0.1:8000",
+]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=ALLOWED_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
-# Health endpoint at root and /api/health
+# Health endpoint at root, /api/health, and /api/v1/health with genuine SELECT 1 db check
 @app.get("/health")
 @app.get("/api/health")
 @app.get("/api/v1/health")
 async def health_check():
+    from sqlalchemy import text
+    db_status = "disconnected"
+    db_type = "postgresql" if "postgresql" in settings.DATABASE_URL else "sqlite"
+    try:
+        async with AsyncSessionLocal() as session:
+            res = await session.execute(text("SELECT 1"))
+            val = res.scalar()
+            if val == 1:
+                db_status = "connected"
+    except Exception as e:
+        db_status = f"disconnected: {str(e)}"
+
+    is_healthy = db_status == "connected"
     return {
-        "status": "healthy",
+        "status": "healthy" if is_healthy else "degraded",
+        "database": db_status,
+        "database_type": db_type,
         "service": "AEGIS Central SaaS Tier 2",
         "version": settings.VERSION,
         "timestamp_utc": datetime.datetime.now(datetime.timezone.utc).isoformat()

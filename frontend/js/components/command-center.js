@@ -48,9 +48,9 @@ const CommandCenter = (() => {
                 <div class="flex items-center justify-between flex-wrap gap-4">
                     <div>
                         <div class="flex items-center gap-2 mb-1">
-                            <span class="badge badge-accent">TENANT: ORG_001 (Acme Corp)</span>
-                            <span class="badge badge-teal">LIVE WINDOWS HOST (psutil)</span>
-                            <span class="badge badge-good" id="cc-stage-badge">STAGE 4: RECOMMEND</span>
+                            <span class="badge badge-accent" id="cc-tenant-badge">TENANT: ORG_001 (Acme Corp)</span>
+                            <span class="badge badge-teal" id="cc-host-badge">Configured Host</span>
+                            <span class="badge badge-good" id="cc-stage-badge">STAGE 1: INGEST</span>
                         </div>
                         <h1 class="page-title">SaaS Command Center</h1>
                         <p class="page-subtitle">Consolidated multi-environment observability & autonomous operations platform</p>
@@ -141,7 +141,7 @@ const CommandCenter = (() => {
                     <div class="stat-icon excellent">${AegisIcons.shieldCheck()}</div>
                     <div class="stat-content">
                         <div class="stat-label">Privacy Compliance</div>
-                        <div class="stat-value" id="cc-privacy-status">100% Compliant</div>
+                        <div class="stat-value" id="cc-privacy-status">Not Evaluated</div>
                         <div class="stat-change neutral" id="cc-egress-count">0 payloads transmitted</div>
                     </div>
                 </div>
@@ -312,21 +312,39 @@ const CommandCenter = (() => {
         setText('cc-state-fair', data.states?.fair ?? 0);
         setText('cc-state-poor', data.states?.poor ?? 0);
 
+        // Dynamic host and maturity status badges
+        const hBadge = document.getElementById('cc-host-badge');
+        if (hBadge && data.host_status) {
+            hBadge.textContent = data.host_status;
+            hBadge.className = data.collectors_online > 0 ? 'badge badge-teal' : 'badge badge-fair';
+        }
+        const sBadge = document.getElementById('cc-stage-badge');
+        if (sBadge && data.maturity_stage) {
+            sBadge.textContent = data.maturity_stage.toUpperCase();
+        }
+
         // Stats
-        setText('cc-collectors-online', data.collectors_online ?? 1);
+        setText('cc-collectors-online', data.collectors_online ?? 0);
         setText('cc-collectors-offline', `${data.collectors_offline ?? 0} offline`);
         setText('cc-active-incidents', data.active_incidents ?? 0);
         setText('cc-incidents-24h', `${data.incidents_24h ?? 0} in last 24h`);
         setText('cc-security-alerts', data.security_alerts ?? 0);
         setText('cc-sec-severity', data.security_severity || 'None active');
-        setText('cc-privacy-status', data.privacy_status || '100% Compliant');
+        setText('cc-privacy-status', data.privacy_status || 'Not Evaluated');
         setText('cc-egress-count', `${data.egress_count ?? 0} verified proofs`);
 
         // Resources (Real Windows machine readings)
-        setText('cc-cpu-avg', `${data.cpu_avg ?? 'N/A'}%`);
-        setText('cc-mem-avg', `${data.memory_avg ?? 'N/A'}%`);
-        setText('cc-disk-avg', `${data.disk_avg ?? 'N/A'}%`);
-        setText('cc-latency-avg', `${data.latency_avg ?? 'N/A'} ms`);
+        if (data.collectors_online === 0 && (!data.cpu_avg || data.cpu_avg === 0)) {
+            setText('cc-cpu-avg', 'N/A');
+            setText('cc-mem-avg', 'N/A');
+            setText('cc-disk-avg', 'N/A');
+            setText('cc-latency-avg', 'N/A');
+        } else {
+            setText('cc-cpu-avg', `${data.cpu_avg ?? 'N/A'}%`);
+            setText('cc-mem-avg', `${data.memory_avg ?? 'N/A'}%`);
+            setText('cc-disk-avg', `${data.disk_avg ?? 'N/A'}%`);
+            setText('cc-latency-avg', `${data.latency_avg ?? 'N/A'} ms`);
+        }
 
         // Incidents list
         const incList = document.getElementById('cc-incidents-list');

@@ -135,9 +135,32 @@ async def get_dashboard_summary(
     if sec_alerts:
         sec_sev = f"{len(sec_alerts)} Alerts ({sec_alerts[0].severity})"
 
-    # 5. Egress proof count
+    # 5. Egress proof count & genuine privacy compliance
     egress_stmt = select(EgressProof).where(EgressProof.tenant_id == current_user.tenant_id)
-    egress_count = len((await db.execute(egress_stmt)).scalars().all())
+    egress_proofs = (await db.execute(egress_stmt)).scalars().all()
+    egress_count = len(egress_proofs)
+
+    if egress_count == 0:
+        privacy_status = "Not Evaluated"
+    else:
+        verified_count = sum(1 for ep in egress_proofs if "Verified" in ep.transmission_status or "Delivered" in ep.transmission_status)
+        compliance_pct = int((verified_count / egress_count) * 100) if egress_count > 0 else 0
+        privacy_status = f"{compliance_pct}% Compliant" if compliance_pct == 100 else f"{compliance_pct}% Verified"
+
+    # Dynamic host status & AIOps maturity stage
+    if online_count > 0:
+        host_status = "LIVE WINDOWS HOST (psutil)"
+    else:
+        host_status = "Configured Host (Awaiting Telemetry)"
+
+    if active_incidents and len(active_incidents) > 0 and len(rec_list) > 0:
+        maturity_stage = "Stage 4: Recommend"
+    elif len(metric_records) > 10:
+        maturity_stage = "Stage 2: Baseline"
+    elif len(metric_records) > 0:
+        maturity_stage = "Stage 1: Ingest"
+    else:
+        maturity_stage = "Stage 0: Unconfigured"
 
     # 6. Recommendations
     rec_list = []
@@ -163,7 +186,7 @@ async def get_dashboard_summary(
         incidents_24h=len(incidents),
         security_alerts=len(sec_alerts),
         security_severity=sec_sev,
-        privacy_status="100% Compliant",
+        privacy_status=privacy_status,
         egress_count=egress_count,
         cpu_avg=cpu_avg,
         memory_avg=mem_avg,
@@ -171,5 +194,7 @@ async def get_dashboard_summary(
         latency_avg=lat_avg,
         incidents=inc_list,
         recommendations=rec_list,
-        simulated=False  # This is live backend data!
+        simulated=False,
+        maturity_stage=maturity_stage,
+        host_status=host_status
     )

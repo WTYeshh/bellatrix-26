@@ -193,3 +193,5 @@ class DashboardSummary(BaseModel):
     incidents: List[Dict[str, Any]]
     recommendations: List[Dict[str, Any]]
     simulated: bool = False
+    maturity_stage: str = "Stage 1: Ingest"
+    host_status: str = "Configured Host"

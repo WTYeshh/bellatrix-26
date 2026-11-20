@@ -92,14 +92,12 @@ async def collector_heartbeat(
     db: AsyncSession = Depends(get_db)
 ):
     """Heartbeat endpoint called periodically by Tier 1 collector."""
-    stmt = select(Collector).where(
-        Collector.collector_id == req.collector_id,
-        Collector.tenant_id == x_tenant_id
-    )
+    stmt = select(Collector).where(Collector.collector_id == req.collector_id)
     collector = (await db.execute(stmt)).scalar_one_or_none()
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+
     if not collector:
         # Auto-register if valid token format
-        now_utc = datetime.datetime.now(datetime.timezone.utc)
         collector = Collector(
             collector_id=req.collector_id,
             tenant_id=x_tenant_id,
@@ -110,13 +108,26 @@ async def collector_heartbeat(
             pending_buffered=req.pending_buffered,
             cpu_usage=req.cpu_usage,
             memory_usage=req.memory_usage,
-            os_info=req.os_info or "Linux/Windows"
+            os_info=req.os_info or "Windows (psutil)"
         )
         db.add(collector)
         await db.commit()
         return {"status": "Heartbeat Received (Auto-Registered)", "server_time": now_utc.isoformat()}
 
-    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    # Authenticate existing collector
+    if collector.auth_token != x_auth_token:
+        raise HTTPException(
+            status_code=401,
+            detail="Collector authentication failed: Invalid auth token."
+        )
+
+    # Derive authenticated tenant
+    if x_tenant_id != collector.tenant_id:
+        raise HTTPException(
+            status_code=403,
+            detail="Tenant ID mismatch: Supplied X-Tenant-Id does not match authorized collector."
+        )
+
     collector.last_heartbeat = now_utc
     collector.status = req.status
     collector.cpu_usage = req.cpu_usage

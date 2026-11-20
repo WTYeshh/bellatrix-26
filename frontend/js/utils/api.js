@@ -3,9 +3,21 @@
  */
 
 const AegisAPI = (() => {
-    const BASE_URL = 'http://localhost:8000/api/v1';
+    function getHost() {
+        if (typeof window !== 'undefined' && window.location) {
+            if (window.location.hostname === '127.0.0.1') return '127.0.0.1';
+            if (window.location.hostname && window.location.hostname !== 'localhost') return window.location.hostname;
+        }
+        return 'localhost';
+    }
+
+    function getBaseUrl() {
+        return `http://${getHost()}:8000/api/v1`;
+    }
+
     let _token = null;
     let _connected = false;
+    let _lastHealth = null;
     let _onConnectionChange = null;
 
     function setToken(token) {
@@ -40,7 +52,7 @@ const AegisAPI = (() => {
     }
 
     async function request(method, path, body = null, options = {}) {
-        const url = `${BASE_URL}${path}`;
+        const url = `${getBaseUrl()}${path}`;
         const headers = {
             'Content-Type': 'application/json',
             ...options.headers,
@@ -82,21 +94,29 @@ const AegisAPI = (() => {
         } catch (err) {
             if (err.name === 'TypeError' && err.message.includes('fetch')) {
                 _updateConnection(false);
-                throw new Error('Cannot connect to AEGIS backend. Is the server running?');
+                throw new Error(`Cannot connect to AEGIS backend at ${getBaseUrl()}. Is the server running?`);
             }
             throw err;
         }
     }
 
-    // Check backend availability
+    // Check backend and genuine database availability via /health
     async function healthCheck() {
         try {
-            await request('GET', '/health', null, { noAuth: true });
-            _updateConnection(true);
-            return true;
-        } catch {
+            const host = getHost();
+            const res = await fetch(`http://${host}:8000/health`);
+            if (res.ok) {
+                const data = await res.json();
+                _lastHealth = data;
+                const isOnline = data.status === 'healthy';
+                _updateConnection(isOnline);
+                return data;
+            }
             _updateConnection(false);
-            return false;
+            return { status: 'degraded', database: 'disconnected' };
+        } catch (err) {
+            _updateConnection(false);
+            return { status: 'offline', database: 'unreachable' };
         }
     }
 
@@ -106,6 +126,8 @@ const AegisAPI = (() => {
         isAuthenticated,
         setConnectionCallback,
         healthCheck,
+        getBaseUrl,
+        getLastHealth: () => _lastHealth,
         get: (path, opts) => request('GET', path, null, opts),
         post: (path, body, opts) => request('POST', path, body, opts),
         put: (path, body, opts) => request('PUT', path, body, opts),
