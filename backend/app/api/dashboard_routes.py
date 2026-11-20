@@ -1,6 +1,7 @@
 import datetime
 import json
-from fastapi import APIRouter, Depends
+from typing import Optional
+from fastapi import APIRouter, Depends, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import desc
@@ -17,17 +18,25 @@ router = APIRouter(tags=["Dashboard"])
 
 @router.get("/dashboard/summary", response_model=DashboardSummary)
 async def get_dashboard_summary(
+    environment: Optional[str] = Query(None),
+    collector_id: Optional[str] = Query(None),
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
 ):
     """
     Central Command Center Dashboard aggregation endpoint.
     Retrieves real fleet health and metrics from PostgreSQL / SQLite.
+    Supports environment and collector filtering.
     """
     now_utc = datetime.datetime.now(datetime.timezone.utc)
 
     # 1. Collectors online / offline
     col_stmt = select(Collector).where(Collector.tenant_id == current_user.tenant_id)
+    if collector_id:
+        col_stmt = col_stmt.where(Collector.collector_id == collector_id)
+    if environment and hasattr(Collector, 'environment'):
+        col_stmt = col_stmt.where(Collector.environment == environment)
+
     collectors = (await db.execute(col_stmt)).scalars().all()
     
     online_count = 0

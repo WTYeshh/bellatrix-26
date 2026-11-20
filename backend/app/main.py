@@ -26,6 +26,7 @@ from backend.app.api.recovery_routes import router as recovery_router
 from backend.app.api.dashboard_routes import router as dashboard_router
 from backend.app.api.stream_routes import router as stream_router
 from backend.app.api.demo_routes import router as demo_router
+from backend.app.api.system_routes import router as system_router
 
 async def seed_initial_data():
     """Seeds default organization, users, and collector if database is clean."""
@@ -143,7 +144,8 @@ routers = [
     recovery_router,
     dashboard_router,
     stream_router,
-    demo_router
+    demo_router,
+    system_router
 ]
 
 for r in routers:
