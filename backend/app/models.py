@@ -38,6 +38,9 @@ class Collector(Base):
     host_identifier = Column(String(255), nullable=False)
     version = Column(String(32), default="1.0.0")
     status = Column(String(32), default="Online")  # Online, Offline, Degraded
+    environment = Column(String(64), default="production", index=True) # production, staging, edge-dc1
+    config_version = Column(String(32), default="v1.0")
+    config_status = Column(String(64), default="Synchronized") # Synchronized, Out-of-Sync, Applying
     last_heartbeat = Column(DateTime(timezone=True), default=utcnow)
     pending_buffered = Column(Integer, default=0)
     cpu_usage = Column(Float, default=0.0)
@@ -55,6 +58,7 @@ class MetricRecord(Base):
     tenant_id = Column(String(64), ForeignKey("organizations.tenant_id"), index=True, nullable=False)
     source_id = Column(String(64), index=True, nullable=False)
     collector_id = Column(String(64), index=True, nullable=False)
+    environment = Column(String(64), default="production", index=True)
     timestamp_utc = Column(DateTime(timezone=True), index=True, nullable=False)
     cpu_usage = Column(Float, nullable=False)
     memory_usage = Column(Float, nullable=False)
@@ -68,6 +72,7 @@ class MetricRecord(Base):
     __table_args__ = (
         Index("ix_metrics_tenant_timestamp", "tenant_id", "timestamp_utc"),
         Index("ix_metrics_tenant_source", "tenant_id", "source_id"),
+        Index("ix_metrics_tenant_env", "tenant_id", "environment"),
     )
 
 class SecuritySummary(Base):
@@ -77,9 +82,12 @@ class SecuritySummary(Base):
     payload_id = Column(String(64), unique=True, index=True, nullable=False)
     tenant_id = Column(String(64), ForeignKey("organizations.tenant_id"), index=True, nullable=False)
     source_id = Column(String(64), index=True, nullable=False)
+    pseudonymous_source_id = Column(String(64), nullable=True)
     event_category = Column(String(64), default="Authentication")
     severity = Column(String(32), default="Medium")  # Low, Medium, High, Critical
     failed_login_count = Column(Integer, default=0)
+    time_window_sec = Column(Integer, default=300)
+    adapter_type = Column(String(64), default="Local-Engine")
     description = Column(String(512), nullable=False)
     timestamp_utc = Column(DateTime(timezone=True), index=True, nullable=False)
 

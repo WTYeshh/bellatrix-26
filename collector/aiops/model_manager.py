@@ -69,5 +69,5 @@ class LocalModelManager:
         score = self._model.decision_function(X)[0]
         # Normalized score: lower score means more anomalous
         norm_score = round(max(0.0, min(1.0, 0.5 - (score * 2.0))), 2)
-        is_anom = bool(pred == -1 and norm_score >= 0.58)
+        is_anom = bool(pred == -1)
         return is_anom, norm_score, "TRAINED"
