@@ -30,6 +30,8 @@ async def list_collectors(
             delta = (now_utc - c.last_heartbeat.replace(tzinfo=datetime.timezone.utc if not c.last_heartbeat.tzinfo else None)).total_seconds()
             if delta > settings.COLLECTOR_OFFLINE_THRESHOLD_SECONDS:
                 is_offline = True
+        else:
+            is_offline = True
 
         status_str = "Offline" if is_offline else c.status
         out.append(CollectorOut(

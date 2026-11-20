@@ -88,6 +88,70 @@ async def test_backend_idempotency_and_duplicate_prevention():
 
     print("✅ Backend idempotency and duplicate prevention verified.")
 
+@pytest.mark.asyncio
+async def test_collector_heartbeat_and_stale_detection():
+    """TEST: Collector heartbeat updates and stale detection (>45s marks collector Offline)."""
+    import datetime
+    from httpx import AsyncClient, ASGITransport
+    from backend.app.main import app, seed_initial_data
+    from backend.app.models import Collector
+
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    await seed_initial_data()
+
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    stale_time = now_utc - datetime.timedelta(seconds=55)
+
+    async with AsyncSessionLocal() as session:
+        # Seed an active collector and a stale collector
+        c_active = Collector(
+            collector_id="COL_ACTIVE_01",
+            tenant_id="ORG_001",
+            host_identifier="win-host-active",
+            version="1.0.0",
+            status="Online",
+            auth_token="token-act",
+            cpu_usage=1.2,
+            memory_usage=38.5,
+            pending_buffered=0,
+            last_heartbeat=now_utc
+        )
+        c_stale = Collector(
+            collector_id="COL_STALE_02",
+            tenant_id="ORG_001",
+            host_identifier="win-host-stale",
+            version="1.0.0",
+            status="Online",  # DB says Online, but last heartbeat was 55s ago!
+            auth_token="token-stale",
+            cpu_usage=0.0,
+            memory_usage=0.0,
+            pending_buffered=3,
+            last_heartbeat=stale_time
+        )
+        session.add(c_active)
+        session.add(c_stale)
+        await session.commit()
+
+    transport = ASGITransport(app=app)
+    async with AsyncClient(transport=transport, base_url="http://test") as ac:
+        resp = await ac.get("/api/v1/collectors", headers={"Authorization": "Bearer demo-token"})
+        assert resp.status_code == 200
+        cols = {c["collector_id"]: c for c in resp.json()}
+
+        # Verify active collector is Online
+        assert "COL_ACTIVE_01" in cols
+        assert cols["COL_ACTIVE_01"]["status"] == "Online"
+        assert cols["COL_ACTIVE_01"]["cpu_usage"] == 1.2
+        assert cols["COL_ACTIVE_01"]["memory_usage"] == 38.5
+
+        # Verify stale collector is detected and dynamically reported as Offline
+        assert "COL_STALE_02" in cols
+        assert cols["COL_STALE_02"]["status"] == "Offline"
+        assert cols["COL_STALE_02"]["pending_buffered"] == 3
+
+    print("✅ Collector heartbeat tracking and 45s stale detection verified.")
+
 if __name__ == "__main__":
     test_sqlite_buffering_and_draining()
     asyncio.run(test_backend_idempotency_and_duplicate_prevention())

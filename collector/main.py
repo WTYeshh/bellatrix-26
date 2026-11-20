@@ -136,10 +136,10 @@ class Tier1Collector:
             raw_metrics = self.metrics_source.collect()
             self.client.send_heartbeat(
                 status="Online",
-                cpu_usage=raw_metrics["cpu_usage"],
-                memory_usage=raw_metrics["memory_usage"],
+                cpu_usage=round(raw_metrics.get("collector_cpu_pct", raw_metrics.get("cpu_usage", 0.0)), 1),
+                memory_usage=round(raw_metrics.get("collector_mem_mb", raw_metrics.get("memory_usage", 0.0)), 1),
                 pending_buffered=buffered_cnt,
-                os_info=f"{sys.platform} (Python {sys.version.split()[0]})"
+                os_info=f"Windows ({sys.platform}) Python {sys.version.split()[0]}"
             )
             self.last_heartbeat = now
 

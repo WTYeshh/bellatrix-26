@@ -20,7 +20,7 @@ class Settings(BaseSettings):
     
     # Ingestion & Security
     ALLOWED_PAYLOAD_MAX_BYTES: int = 1024 * 1024  # 1 MB max payload
-    COLLECTOR_OFFLINE_THRESHOLD_SECONDS: int = 60  # Marked offline after 60s
+    COLLECTOR_OFFLINE_THRESHOLD_SECONDS: int = 45  # Marked offline after 45s of missed heartbeats
     
     # AIOps Configuration
     BASELINE_WINDOW_SIZE: int = 30
