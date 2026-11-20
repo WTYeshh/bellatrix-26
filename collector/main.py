@@ -2,6 +2,7 @@ import time
 import uuid
 import datetime
 import sys
+import os
 from typing import Dict, Any, Optional
 
 from collector.config import collector_config
@@ -11,6 +12,7 @@ from collector.privacy.engine import PrivacyEngine
 from collector.privacy.proof import EgressProofGenerator
 from collector.storage.local_db import LocalCollectorStorage
 from collector.transport.client import SaaSClient
+from collector.aiops.local_analysis import LocalAIOpsCoordinator
 
 class Tier1Collector:
     def __init__(self):
@@ -20,6 +22,7 @@ class Tier1Collector:
         self.privacy_engine = PrivacyEngine(policy_version="Standard-v1")
         self.proof_gen = EgressProofGenerator(policy_version="Standard-v1")
         self.storage = LocalCollectorStorage(db_path=self.config.LOCAL_DB_PATH)
+        self.local_aiops = LocalAIOpsCoordinator()
         self.client = SaaSClient(
             base_url=self.config.SAAS_URL,
             tenant_id=self.config.TENANT_ID,
@@ -32,7 +35,7 @@ class Tier1Collector:
         """
         Executes the mandatory Tier 1 processing sequence:
         COLLECT -> FILTER -> REDACT -> NORMALIZE -> AGGREGATE ->
-        ANALYSE LOCALLY -> APPLY DATA POLICY -> GENERATE EGRESS PROOF -> TRANSMIT / BUFFER
+        ANALYSE LOCALLY (Local AIOps) -> APPLY DATA POLICY -> GENERATE EGRESS PROOF -> TRANSMIT / BUFFER
         """
         now_utc = datetime.datetime.now(datetime.timezone.utc).isoformat()
         payload_id = str(uuid.uuid4())
@@ -43,20 +46,24 @@ class Tier1Collector:
         # 2. STORE RAW LOCALLY (Raw data stays local by default)
         self.storage.save_raw_telemetry(payload_id, now_utc, raw_telemetry)
 
-        # 3. NORMALIZE & ENRICH
+        # 3. ANALYSE LOCALLY: Run Tier 1 Local AIOps (MAD, Z-Score, Isolation Forest)
+        local_anomalies = self.local_aiops.process_telemetry(self.config.SOURCE_ID, raw_telemetry)
+
+        # 4. NORMALIZE & ENRICH
         raw_telemetry["payload_id"] = payload_id
         raw_telemetry["tenant_id"] = self.config.TENANT_ID
         raw_telemetry["collector_id"] = self.config.COLLECTOR_ID
         raw_telemetry["source_id"] = self.config.SOURCE_ID
         raw_telemetry["timestamp_utc"] = now_utc
         raw_telemetry["event_category"] = "Performance"
+        raw_telemetry["local_anomalies"] = local_anomalies
 
-        # 4. FILTER & REDACT (APPLY DATA POLICY)
+        # 5. FILTER & REDACT (APPLY DATA POLICY)
         approved_payload, approved_fields, dropped_or_redacted_fields = (
             self.privacy_engine.apply_policy(raw_telemetry)
         )
 
-        # 5. GENERATE EGRESS PROOF (Deterministic JSON + SHA-256)
+        # 6. GENERATE EGRESS PROOF (Deterministic JSON + SHA-256)
         proof_bundle = self.proof_gen.generate_proof(
             approved_payload=approved_payload,
             approved_fields=approved_fields,
@@ -65,7 +72,7 @@ class Tier1Collector:
         payload_to_send = proof_bundle["payload_to_send"]
         proof_record = proof_bundle["proof_record"]
 
-        # 6. TRANSMIT OR BUFFER LOCALLY (RESILIENCE)
+        # 7. TRANSMIT OR BUFFER LOCALLY (RESILIENCE)
         success, response = self.client.send_metadata(payload_to_send)
 
         if success:
@@ -85,6 +92,7 @@ class Tier1Collector:
             "buffered": not success,
             "approved_fields": approved_fields,
             "dropped_fields": dropped_or_redacted_fields,
+            "local_anomalies": local_anomalies,
             "payload_hash": proof_record["payload_hash"],
             "exact_json": proof_record["exact_transmitted_json"],
             "pending_buffer_count": self.storage.count_pending()
@@ -113,7 +121,7 @@ class Tier1Collector:
                 cpu_usage=raw_metrics["cpu_usage"],
                 memory_usage=raw_metrics["memory_usage"],
                 pending_buffered=buffered_cnt,
-                os_info=f"{sys.platform}"
+                os_info=f"{sys.platform} (Python {sys.version.split()[0]})"
             )
             self.last_heartbeat = now
 
@@ -126,7 +134,9 @@ class Tier1Collector:
             try:
                 cycle_result = self.run_cycle()
                 status_str = "Delivered" if cycle_result["success"] else "Buffered"
-                print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Payload {cycle_result['payload_id'][:8]} -> {status_str} (SHA-256: {cycle_result['payload_hash'][:12]}... Pending buffer: {cycle_result['pending_buffer_count']})")
+                anom_count = len(cycle_result.get("local_anomalies", []))
+                anom_flag = f" [! {anom_count} LOCAL ANOMALIES]" if anom_count > 0 else ""
+                print(f"[{datetime.datetime.now().strftime('%H:%M:%S')}] Payload {cycle_result['payload_id'][:8]} -> {status_str}{anom_flag} (SHA-256: {cycle_result['payload_hash'][:12]}... Pending buffer: {cycle_result['pending_buffer_count']})")
                 self.heartbeat_cycle()
             except Exception as e:
                 print(f"[AEGIS Collector Error] {e}")

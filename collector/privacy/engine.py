@@ -15,6 +15,10 @@ class PrivacyEngine:
         "disk_usage",
         "latency_ms",
         "packet_loss_pct",
+        "throughput_kbps",
+        "bytes_sent",
+        "bytes_recv",
+        "local_anomalies",
         "health_state",
         "event_category",
         "severity"
@@ -67,6 +71,23 @@ class PrivacyEngine:
                     approved_fields.append(key)
                     if was_redacted:
                         dropped_or_redacted_fields.append(f"{key}:[secret_redacted]")
+                elif isinstance(value, list) and key == "local_anomalies":
+                    # Sanitize any string fields inside local anomalies
+                    clean_anoms = []
+                    for item in value:
+                        if isinstance(item, dict):
+                            clean_item = {}
+                            for ik, iv in item.items():
+                                if isinstance(iv, str):
+                                    c_iv, _ = self.redact_secrets_in_string(iv)
+                                    clean_item[ik] = c_iv
+                                else:
+                                    clean_item[ik] = iv
+                            clean_anoms.append(clean_item)
+                        else:
+                            clean_anoms.append(item)
+                    approved_payload[key] = clean_anoms
+                    approved_fields.append(key)
                 else:
                     approved_payload[key] = value
                     approved_fields.append(key)

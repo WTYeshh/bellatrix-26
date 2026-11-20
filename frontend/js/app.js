@@ -40,10 +40,38 @@ const AegisApp = (() => {
         document.getElementById('app-page').classList.remove('hidden');
         setupSidebar();
         setupRoutes();
+        initEventStream();
 
         // Navigate to hash or default
         const hash = window.location.hash.slice(1) || 'command-center';
         AegisRouter.navigate(hash);
+    }
+
+    function initEventStream() {
+        if (window._aegisEventSource) return;
+        try {
+            const es = new EventSource('http://localhost:8000/api/v1/events/stream');
+            window._aegisEventSource = es;
+            es.onmessage = (event) => {
+                try {
+                    const msg = JSON.parse(event.data);
+                    if (msg.event === 'telemetry') {
+                        if (AegisRouter.getCurrentPage() === 'command-center') {
+                            CommandCenter.loadData();
+                        } else if (AegisRouter.getCurrentPage() === 'infrastructure') {
+                            InfraMonitoring.load();
+                        }
+                    } else if (msg.event === 'anomaly') {
+                        AegisToast.warning(`AI Anomaly Detected on ${msg.data.source_id}`);
+                        if (AegisRouter.getCurrentPage() === 'ai-insights') {
+                            AIInsights.load();
+                        } else if (AegisRouter.getCurrentPage() === 'incident-dna') {
+                            IncidentDNA.load();
+                        }
+                    }
+                } catch(e) {}
+            };
+        } catch(e) {}
     }
 
     function setupLoginForm() {
@@ -171,6 +199,7 @@ const AegisApp = (() => {
         AegisRouter.register('egress-proof', (el) => EgressProof.render(el));
         AegisRouter.register('audit-center', (el) => AuditCenter.render(el));
         AegisRouter.register('recovery-simulator', (el) => RecoverySimulator.render(el));
+        AegisRouter.register('demo-controls', (el) => DemoControls.render(el));
         AegisRouter.register('settings', (el) => OrgSettings.render(el));
     }
 
@@ -187,6 +216,7 @@ const AegisApp = (() => {
             'egress-proof': 'Egress Proof',
             'audit-center': 'Audit Center',
             'recovery-simulator': 'Recovery Simulator',
+            'demo-controls': 'AI Demo Controls',
             'settings': 'Settings',
         };
 

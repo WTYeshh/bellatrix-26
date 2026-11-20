@@ -10,6 +10,7 @@ from backend.app.models import (
 )
 from backend.app.schemas import MetadataPayload, IngestionAck
 from backend.app.aiops.engine import aiops_engine
+from backend.app.api.broadcaster import broadcaster
 
 STRICT_ALLOWED_FIELDS = {
     "payload_id",
@@ -22,6 +23,10 @@ STRICT_ALLOWED_FIELDS = {
     "disk_usage",
     "latency_ms",
     "packet_loss_pct",
+    "throughput_kbps",
+    "bytes_sent",
+    "bytes_recv",
+    "local_anomalies",
     "health_state",
     "event_category",
     "severity",
@@ -207,6 +212,27 @@ async def process_ingestion_payload(
             db.add(new_incident)
 
     await db.commit()
+
+    # 9. Asynchronously broadcast live updates to SSE listeners
+    try:
+        await broadcaster.broadcast("telemetry", {
+            "source_id": payload.source_id,
+            "cpu_usage": payload.cpu_usage,
+            "memory_usage": payload.memory_usage,
+            "disk_usage": payload.disk_usage,
+            "latency_ms": payload.latency_ms,
+            "health_state": payload.health_state,
+            "anomalies_count": len(anomalies_detected),
+            "timestamp_utc": now_utc.isoformat()
+        })
+        if anomalies_detected:
+            await broadcaster.broadcast("anomaly", {
+                "source_id": payload.source_id,
+                "anomalies": anomalies_detected,
+                "timestamp_utc": now_utc.isoformat()
+            })
+    except Exception:
+        pass
 
     return IngestionAck(
         status="Delivered",

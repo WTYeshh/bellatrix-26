@@ -14,6 +14,10 @@ class MetadataPayload(BaseModel):
     disk_usage: float = Field(..., ge=0.0, le=100.0)
     latency_ms: Optional[float] = 0.0
     packet_loss_pct: Optional[float] = 0.0
+    throughput_kbps: Optional[float] = 0.0
+    bytes_sent: Optional[float] = 0.0
+    bytes_recv: Optional[float] = 0.0
+    local_anomalies: Optional[List[Dict[str, Any]]] = None
     health_state: str = Field("Good", pattern="^(Excellent|Good|Fair|Poor)$")
     event_category: str = "Performance"
     severity: str = "Low"

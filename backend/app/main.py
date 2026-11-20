@@ -24,6 +24,8 @@ from backend.app.api.egress_routes import router as egress_router
 from backend.app.api.audit_routes import router as audit_router
 from backend.app.api.recovery_routes import router as recovery_router
 from backend.app.api.dashboard_routes import router as dashboard_router
+from backend.app.api.stream_routes import router as stream_router
+from backend.app.api.demo_routes import router as demo_router
 
 async def seed_initial_data():
     """Seeds default organization, users, and collector if database is clean."""
@@ -139,7 +141,9 @@ routers = [
     egress_router,
     audit_router,
     recovery_router,
-    dashboard_router
+    dashboard_router,
+    stream_router,
+    demo_router
 ]
 
 for r in routers:

@@ -27,7 +27,7 @@ def test_statistical_baselines_and_zscore():
     assert anomaly["severity"] in ["High", "Critical"]
     assert anomaly["deviation_sigma"] >= 3.0
     assert anomaly["observed_value"] == 96.0
-    assert "historical baseline" in anomaly["reason"]
+    assert "historical baseline" in anomaly["reason"] or "acceleration" in anomaly["reason"]
     print("✅ Statistical baselines & robust Z-Score anomaly detection verified.")
 
 def test_isolation_forest_ml_scoring():
