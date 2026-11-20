@@ -152,7 +152,7 @@ app = FastAPI(
     redoc_url="/redoc"
 )
 
-# Enable CORS for frontend integration with explicit origins (W3C credentials compliant)
+# Enable CORS for frontend integration with explicit origins and Private Network Access
 ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -163,7 +163,9 @@ ALLOWED_ORIGINS = [
 app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
+    allow_origin_regex=r"https?://(localhost|127\.0\.0\.1)(:\d+)?",
     allow_credentials=True,
+    allow_private_network=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )

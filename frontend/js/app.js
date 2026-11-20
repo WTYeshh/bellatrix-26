@@ -74,7 +74,8 @@ const AegisApp = (() => {
     function initEventStream() {
         if (window._aegisEventSource) return;
         try {
-            const es = new EventSource('http://localhost:8000/api/v1/events/stream');
+            const host = (typeof AegisAPI !== 'undefined' && AegisAPI.getHost) ? AegisAPI.getHost() : '127.0.0.1';
+            const es = new EventSource(`http://${host}:8000/api/v1/events/stream`);
             window._aegisEventSource = es;
             es.onmessage = (event) => {
                 try {

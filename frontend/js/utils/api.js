@@ -3,12 +3,16 @@
  */
 
 const AegisAPI = (() => {
+    let _activeHost = null;
+
     function getHost() {
+        if (_activeHost) return _activeHost;
         if (typeof window !== 'undefined' && window.location) {
             if (window.location.hostname === '127.0.0.1') return '127.0.0.1';
-            if (window.location.hostname && window.location.hostname !== 'localhost') return window.location.hostname;
+            if (window.location.hostname === 'localhost') return '127.0.0.1';
+            if (window.location.hostname) return window.location.hostname;
         }
-        return 'localhost';
+        return '127.0.0.1';
     }
 
     function getBaseUrl() {
@@ -52,7 +56,11 @@ const AegisAPI = (() => {
     }
 
     async function request(method, path, body = null, options = {}) {
-        const url = `${getBaseUrl()}${path}`;
+        const primaryHost = getHost();
+        const fallbackHost = primaryHost === '127.0.0.1' ? 'localhost' : '127.0.0.1';
+        const primaryUrl = `http://${primaryHost}:8000/api/v1${path}`;
+        const fallbackUrl = `http://${fallbackHost}:8000/api/v1${path}`;
+
         const headers = {
             'Content-Type': 'application/json',
             ...options.headers,
@@ -72,52 +80,65 @@ const AegisAPI = (() => {
             config.body = JSON.stringify(body);
         }
 
+        let response;
         try {
-            const response = await fetch(url, config);
-            _updateConnection(true);
-
-            if (response.status === 401) {
-                // Token expired or invalid
-                setToken(null);
-                if (window.AegisApp) {
-                    window.AegisApp.showLogin();
+            response = await fetch(primaryUrl, config);
+            _activeHost = primaryHost;
+        } catch (primaryErr) {
+            if (primaryErr.name === 'TypeError' && primaryErr.message.includes('fetch')) {
+                // Try fallback host (localhost <-> 127.0.0.1)
+                try {
+                    response = await fetch(fallbackUrl, config);
+                    _activeHost = fallbackHost;
+                } catch (fallbackErr) {
+                    _updateConnection(false);
+                    throw new Error(`Cannot connect to AEGIS backend at ${primaryUrl}. Is the server running?`);
                 }
-                throw new Error('Authentication expired. Please log in again.');
+            } else {
+                throw primaryErr;
             }
-
-            if (!response.ok) {
-                const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.detail || `HTTP ${response.status}: ${response.statusText}`);
-            }
-
-            return await response.json();
-        } catch (err) {
-            if (err.name === 'TypeError' && err.message.includes('fetch')) {
-                _updateConnection(false);
-                throw new Error(`Cannot connect to AEGIS backend at ${getBaseUrl()}. Is the server running?`);
-            }
-            throw err;
         }
+
+        _updateConnection(true);
+
+        if (response.status === 401) {
+            // Token expired or invalid
+            setToken(null);
+            if (window.AegisApp) {
+                window.AegisApp.showLogin();
+            }
+            throw new Error('Authentication expired. Please log in again.');
+        }
+
+        if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.detail || `HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        return await response.json();
     }
 
     // Check backend and genuine database availability via /health
     async function healthCheck() {
-        try {
-            const host = getHost();
-            const res = await fetch(`http://${host}:8000/health`);
-            if (res.ok) {
-                const data = await res.json();
-                _lastHealth = data;
-                const isOnline = data.status === 'healthy';
-                _updateConnection(isOnline);
-                return data;
+        const primary = getHost();
+        const fallback = primary === '127.0.0.1' ? 'localhost' : '127.0.0.1';
+        for (const h of [primary, fallback]) {
+            try {
+                const res = await fetch(`http://${h}:8000/health`);
+                if (res.ok) {
+                    const data = await res.json();
+                    _lastHealth = data;
+                    _activeHost = h;
+                    const isOnline = data.status === 'healthy';
+                    _updateConnection(isOnline);
+                    return data;
+                }
+            } catch (err) {
+                // Try next host
             }
-            _updateConnection(false);
-            return { status: 'degraded', database: 'disconnected' };
-        } catch (err) {
-            _updateConnection(false);
-            return { status: 'offline', database: 'unreachable' };
         }
+        _updateConnection(false);
+        return { status: 'offline', database: 'unreachable' };
     }
 
     return {
@@ -127,6 +148,7 @@ const AegisAPI = (() => {
         setConnectionCallback,
         healthCheck,
         getBaseUrl,
+        getHost,
         getLastHealth: () => _lastHealth,
         get: (path, opts) => request('GET', path, null, opts),
         post: (path, body, opts) => request('POST', path, body, opts),
