@@ -1,0 +1,16 @@
+{
+  "name": "aegis",
+  "version": "1.0.0",
+  "description": "AEGIS — Privacy-First AIOps Observability Platform",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "keywords": [
+    "aiops",
+    "observability",
+    "privacy"
+  ],
+  "author": "",
+  "license": "MIT"
+}
