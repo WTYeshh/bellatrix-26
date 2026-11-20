@@ -118,3 +118,11 @@ class LocalCollectorStorage:
                 )
             )
             conn.commit()
+
+    def get_recent_proofs(self, limit: int = 50) -> List[Dict[str, Any]]:
+        with self._get_connection() as conn:
+            cursor = conn.execute(
+                "SELECT payload_id, payload_hash, approved_fields, redacted_fields, status, timestamp_utc FROM egress_proof_local ORDER BY id DESC LIMIT ?",
+                (limit,)
+            )
+            return [dict(r) for r in cursor.fetchall()]
