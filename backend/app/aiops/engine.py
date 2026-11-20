@@ -59,9 +59,11 @@ class UnifiedAIOpsEngine:
         self,
         tenant_id: str,
         anomalies: List[Dict[str, Any]],
-        existing_active_incidents: List[Any]
+        existing_active_incidents: Optional[List[Any]] = None,
+        existing_incidents: Optional[List[Any]] = None
     ) -> Optional[Dict[str, Any]]:
-        return self.correlation_engine.correlate(tenant_id, anomalies, existing_active_incidents)
+        incidents = existing_active_incidents if existing_active_incidents is not None else (existing_incidents or [])
+        return self.correlation_engine.correlate(tenant_id, anomalies, incidents)
 
     def generate_explainable_recommendation(
         self,

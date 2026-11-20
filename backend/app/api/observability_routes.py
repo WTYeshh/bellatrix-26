@@ -6,10 +6,136 @@ from sqlalchemy.future import select
 from sqlalchemy import desc
 
 from backend.app.database import get_db
-from backend.app.models import MetricRecord, SecuritySummary, User, Collector
+from backend.app.models import MetricRecord, SecuritySummary, User, Collector, HealthTransitionRecord
 from backend.app.auth.security import get_current_user
+from collector.host_inventory import WindowsHostInventory
 
 router = APIRouter(tags=["Observability"])
+
+_inventory_provider = WindowsHostInventory()
+
+@router.get("/hosts")
+async def get_hosts(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Returns discovered Windows host details and registered fleet nodes."""
+    inv = _inventory_provider.collect_full_inventory()
+    # Also fetch registered collectors for tenant
+    stmt = select(Collector).where(Collector.tenant_id == current_user.tenant_id)
+    collectors = (await db.execute(stmt)).scalars().all()
+    
+    return {
+        "local_host_inventory": inv,
+        "registered_fleet_hosts": [
+            {
+                "collector_id": c.collector_id,
+                "host_identifier": c.host_identifier,
+                "status": c.status,
+                "os_info": c.os_info,
+                "last_heartbeat": c.last_heartbeat.isoformat() if c.last_heartbeat else None
+            }
+            for c in collectors
+        ]
+    }
+
+@router.get("/metrics/cpu")
+async def get_metrics_cpu(
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(30, ge=1, le=200),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(MetricRecord)
+        .where(MetricRecord.tenant_id == current_user.tenant_id)
+        .order_by(desc(MetricRecord.timestamp_utc))
+        .limit(limit)
+    )
+    records = (await db.execute(stmt)).scalars().all()
+    return [
+        {
+            "timestamp": r.timestamp_utc.isoformat() if r.timestamp_utc else None,
+            "source_id": r.source_id,
+            "cpu_usage": r.cpu_usage
+        }
+        for r in records
+    ]
+
+@router.get("/metrics/memory")
+async def get_metrics_memory(
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(30, ge=1, le=200),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(MetricRecord)
+        .where(MetricRecord.tenant_id == current_user.tenant_id)
+        .order_by(desc(MetricRecord.timestamp_utc))
+        .limit(limit)
+    )
+    records = (await db.execute(stmt)).scalars().all()
+    return [
+        {
+            "timestamp": r.timestamp_utc.isoformat() if r.timestamp_utc else None,
+            "source_id": r.source_id,
+            "memory_usage": r.memory_usage
+        }
+        for r in records
+    ]
+
+@router.get("/metrics/disk")
+async def get_metrics_disk(
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(30, ge=1, le=200),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(MetricRecord)
+        .where(MetricRecord.tenant_id == current_user.tenant_id)
+        .order_by(desc(MetricRecord.timestamp_utc))
+        .limit(limit)
+    )
+    records = (await db.execute(stmt)).scalars().all()
+    return [
+        {
+            "timestamp": r.timestamp_utc.isoformat() if r.timestamp_utc else None,
+            "source_id": r.source_id,
+            "disk_usage": r.disk_usage
+        }
+        for r in records
+    ]
+
+@router.get("/metrics/network")
+async def get_metrics_network(
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(30, ge=1, le=200),
+    db: AsyncSession = Depends(get_db)
+):
+    stmt = (
+        select(MetricRecord)
+        .where(MetricRecord.tenant_id == current_user.tenant_id)
+        .order_by(desc(MetricRecord.timestamp_utc))
+        .limit(limit)
+    )
+    records = (await db.execute(stmt)).scalars().all()
+    return [
+        {
+            "timestamp": r.timestamp_utc.isoformat() if r.timestamp_utc else None,
+            "source_id": r.source_id,
+            "latency_ms": r.latency_ms,
+            "packet_loss_pct": r.packet_loss_pct
+        }
+        for r in records
+    ]
+
+@router.get("/services")
+async def get_monitored_services_list(
+    current_user: User = Depends(get_current_user)
+):
+    """Returns live configured Windows services and their availability."""
+    from collector.service_monitor import ServiceMonitor
+    mon = ServiceMonitor()
+    return mon.collect()
 
 @router.get("/metrics")
 async def get_metrics(
@@ -176,3 +302,34 @@ async def record_security_event(
     db.add(summary)
     await db.commit()
     return {"status": "Security Summary Recorded", "payload_id": summary.payload_id}
+
+@router.get("/health-transitions")
+async def get_health_transitions(
+    current_user: User = Depends(get_current_user),
+    limit: int = Query(50, ge=1, le=200),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Returns history of health state transitions (Excellent, Good, Fair, Poor).
+    Includes reason, supporting metrics, and transition timestamps.
+    """
+    stmt = (
+        select(HealthTransitionRecord)
+        .where(HealthTransitionRecord.tenant_id == current_user.tenant_id)
+        .order_by(desc(HealthTransitionRecord.transition_time_utc))
+        .limit(limit)
+    )
+    records = (await db.execute(stmt)).scalars().all()
+    import json
+    return [
+        {
+            "id": r.id,
+            "source_id": r.source_id,
+            "previous_state": r.previous_state,
+            "current_state": r.current_state,
+            "reason": r.reason,
+            "supporting_metrics": json.loads(r.supporting_metrics) if r.supporting_metrics else {},
+            "transition_time_utc": r.transition_time_utc.isoformat() if r.transition_time_utc else None
+        }
+        for r in records
+    ]

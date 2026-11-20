@@ -6,7 +6,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 
 from backend.app.models import (
-    MetricRecord, EgressProof, Collector, AnomalyRecord, Incident, AuditRecord
+    MetricRecord, EgressProof, Collector, AnomalyRecord, Incident, AuditRecord, HealthTransitionRecord
 )
 from backend.app.schemas import MetadataPayload, IngestionAck
 from backend.app.aiops.engine import aiops_engine
@@ -114,6 +114,40 @@ async def process_ingestion_payload(
         severity=payload.severity
     )
     db.add(metric_record)
+
+    # 4b. Track Four Health States Transition (Excellent, Good, Fair, Poor)
+    prev_stmt = select(MetricRecord).where(
+        MetricRecord.tenant_id == payload.tenant_id,
+        MetricRecord.source_id == payload.source_id
+    ).order_by(MetricRecord.timestamp_utc.desc()).limit(1)
+    prev_metric = (await db.execute(prev_stmt)).scalar_one_or_none()
+
+    if prev_metric and prev_metric.health_state != payload.health_state:
+        reason = f"Health transitioned from {prev_metric.health_state} to {payload.health_state}"
+        if payload.health_state == "Poor":
+            reason = f"Critical telemetry breach: CPU={payload.cpu_usage}%, RAM={payload.memory_usage}%, Latency={payload.latency_ms}ms"
+        elif payload.health_state == "Fair":
+            reason = f"Elevated resource utilization: CPU={payload.cpu_usage}%, RAM={payload.memory_usage}%"
+        elif payload.health_state == "Good":
+            reason = "Telemetry returning to nominal operational thresholds"
+        elif payload.health_state == "Excellent":
+            reason = "All monitored hardware systems optimal"
+
+        transition = HealthTransitionRecord(
+            tenant_id=payload.tenant_id,
+            source_id=payload.source_id,
+            previous_state=prev_metric.health_state,
+            current_state=payload.health_state,
+            reason=reason,
+            supporting_metrics=json.dumps({
+                "cpu_usage": payload.cpu_usage,
+                "memory_usage": payload.memory_usage,
+                "disk_usage": payload.disk_usage,
+                "latency_ms": payload.latency_ms or 0.0
+            }),
+            transition_time_utc=now_utc
+        )
+        db.add(transition)
 
     # 5. Save Egress Proof Record
     proof_record = EgressProof(

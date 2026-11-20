@@ -6,8 +6,8 @@ from sqlalchemy.future import select
 from sqlalchemy import desc
 
 from backend.app.database import get_db
-from backend.app.models import AnomalyRecord, User, MetricRecord
-from backend.app.schemas import AnomalyOut
+from backend.app.models import AnomalyRecord, User, MetricRecord, Incident
+from backend.app.schemas import AnomalyOut, RecommendationOut
 from backend.app.auth.security import get_current_user
 from backend.app.aiops.engine import aiops_engine
 
@@ -61,6 +61,43 @@ async def get_baselines(
         "source_id": source_id,
         "baselines": baselines
     }
+
+@router.get("/recommendations", response_model=List[RecommendationOut])
+async def list_aiops_recommendations(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Explainable AIOps recommendations alias under /aiops/recommendations."""
+    stmt = select(Incident).where(
+        Incident.tenant_id == current_user.tenant_id,
+        Incident.status.in_(["Active", "Investigating"])
+    )
+    incidents = (await db.execute(stmt)).scalars().all()
+    recommendations = []
+
+    for inc in incidents:
+        try:
+            rel_alerts = json.loads(inc.related_alerts) if isinstance(inc.related_alerts, str) else inc.related_alerts
+        except:
+            rel_alerts = []
+        try:
+            aff_cols = json.loads(inc.affected_collectors) if isinstance(inc.affected_collectors, str) else inc.affected_collectors
+        except:
+            aff_cols = []
+
+        rec_dict = aiops_engine.generate_explainable_recommendation({
+            "incident_id": inc.incident_id,
+            "title": inc.title,
+            "severity": inc.severity,
+            "likely_cause": inc.likely_cause,
+            "recommended_investigation": inc.recommended_investigation,
+            "confidence": inc.confidence,
+            "related_alerts": rel_alerts,
+            "affected_collectors": aff_cols
+        })
+        recommendations.append(RecommendationOut(**rec_dict))
+
+    return recommendations
 
 @router.get("/pipeline-status")
 async def get_pipeline_status(current_user: User = Depends(get_current_user)):

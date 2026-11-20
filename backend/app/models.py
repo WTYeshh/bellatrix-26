@@ -181,3 +181,15 @@ class RecoverySimulation(Base):
     simulation_result = Column(Text, nullable=True)
     rollback_info = Column(Text, nullable=True)
     created_at = Column(DateTime(timezone=True), default=utcnow)
+
+class HealthTransitionRecord(Base):
+    __tablename__ = "health_transitions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tenant_id = Column(String(64), ForeignKey("organizations.tenant_id"), index=True, nullable=False)
+    source_id = Column(String(64), index=True, nullable=False)
+    previous_state = Column(String(32), nullable=False)  # Excellent, Good, Fair, Poor
+    current_state = Column(String(32), nullable=False)
+    reason = Column(String(256), nullable=False)
+    supporting_metrics = Column(Text, nullable=False)  # JSON dictionary of metrics
+    transition_time_utc = Column(DateTime(timezone=True), default=utcnow, nullable=False)

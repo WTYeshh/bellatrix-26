@@ -6,8 +6,10 @@ import os
 from typing import Dict, Any, Optional
 
 from collector.config import collector_config
-from collector.sources.system_metrics import SystemMetricsSource
+from collector.system_monitor import SystemMetricsSource
 from collector.sources.security_events import SecurityEventsSource
+from collector.host_inventory import WindowsHostInventory
+from collector.heartbeat import HeartbeatManager
 from collector.privacy.engine import PrivacyEngine
 from collector.privacy.proof import EgressProofGenerator
 from collector.storage.local_db import LocalCollectorStorage
@@ -17,6 +19,7 @@ from collector.aiops.local_analysis import LocalAIOpsCoordinator
 class Tier1Collector:
     def __init__(self):
         self.config = collector_config
+        self.host_inventory = WindowsHostInventory()
         self.metrics_source = SystemMetricsSource()
         self.security_source = SecurityEventsSource()
         self.privacy_engine = PrivacyEngine(policy_version="Standard-v1")
@@ -29,7 +32,13 @@ class Tier1Collector:
             collector_id=self.config.COLLECTOR_ID,
             auth_token=self.config.AUTH_TOKEN
         )
+        self.heartbeat_mgr = HeartbeatManager(
+            client=self.client,
+            collector_id=self.config.COLLECTOR_ID,
+            heartbeat_interval=self.config.HEARTBEAT_INTERVAL_SECONDS
+        )
         self.last_heartbeat = 0.0
+        self._cached_inventory = self.host_inventory.collect_full_inventory()
 
     def run_cycle(self) -> Dict[str, Any]:
         """
@@ -130,21 +139,24 @@ class Tier1Collector:
                 break  # Stop if still unreachable
 
     def heartbeat_cycle(self):
-        now = time.time()
-        if now - self.last_heartbeat >= self.config.HEARTBEAT_INTERVAL_SECONDS:
-            buffered_cnt = self.storage.count_pending()
-            raw_metrics = self.metrics_source.collect()
-            self.client.send_heartbeat(
-                status="Online",
-                cpu_usage=round(raw_metrics.get("collector_cpu_pct", raw_metrics.get("cpu_usage", 0.0)), 1),
-                memory_usage=round(raw_metrics.get("collector_mem_mb", raw_metrics.get("memory_usage", 0.0)), 1),
-                pending_buffered=buffered_cnt,
-                os_info=f"Windows ({sys.platform}) Python {sys.version.split()[0]}"
-            )
-            self.last_heartbeat = now
+        buffered_cnt = self.storage.count_pending()
+        raw_metrics = self.metrics_source.collect()
+        inv = self._cached_inventory
+        os_detail = f"{inv['windows_edition']} (Build {inv['windows_build']}) | {inv['cpu_model']}"
+        self.client.send_heartbeat(
+            status="Online",
+            cpu_usage=round(raw_metrics.get("collector_cpu_pct", raw_metrics.get("cpu_usage", 0.0)), 1),
+            memory_usage=round(raw_metrics.get("collector_mem_mb", raw_metrics.get("memory_usage", 0.0)), 1),
+            pending_buffered=buffered_cnt,
+            os_info=os_detail
+        )
+        self.last_heartbeat = time.time()
 
     def run_forever(self):
+        inv = self._cached_inventory
         print(f"[AEGIS Collector] Starting Tier 1 Local Collector for Tenant={self.config.TENANT_ID}")
+        print(f"[AEGIS Collector] Discovered Host: {inv['hostname']} ({inv['windows_edition']} Build {inv['windows_build']}, {inv['cpu_model']})")
+        print(f"[AEGIS Collector] Hardware: {inv['cpu_physical_cores']} Cores / {inv['cpu_logical_cores']} Threads | {inv['ram_total_gb']} GB RAM")
         print(f"[AEGIS Collector] Local Storage: {self.config.LOCAL_DB_PATH}")
         print(f"[AEGIS Collector] Target SaaS URL: {self.config.SAAS_URL}")
         

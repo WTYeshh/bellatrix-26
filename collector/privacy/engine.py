@@ -46,6 +46,11 @@ class PrivacyEngine:
                 result = pat.sub("[REDACTED_SECRET]", result)
         return result, redacted
 
+    def scrub_text(self, text: str) -> str:
+        """Helper to scrub sensitive credentials from a text string."""
+        scrubbed, _ = self.redact_secrets_in_string(text)
+        return scrubbed
+
     def pseudonymize_source(self, raw_identifier: str, salt: str = "aegis_salt_2026") -> str:
         """Generates deterministic pseudonymous identifier for customer host."""
         h = hashlib.sha256(f"{raw_identifier}:{salt}".encode("utf-8")).hexdigest()

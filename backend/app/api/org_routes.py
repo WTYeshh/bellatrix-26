@@ -8,6 +8,7 @@ from backend.app.auth.security import get_current_user
 
 router = APIRouter(prefix="/organizations", tags=["Organizations"])
 
+@router.get("")
 @router.get("/profile")
 async def get_org_profile(
     current_user: User = Depends(get_current_user),
