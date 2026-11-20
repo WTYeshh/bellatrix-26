@@ -102,11 +102,13 @@ async def test_collector_heartbeat_and_stale_detection():
 
     now_utc = datetime.datetime.now(datetime.timezone.utc)
     stale_time = now_utc - datetime.timedelta(seconds=55)
+    cid_active = f"COL_ACT_{uuid.uuid4().hex[:6]}"
+    cid_stale = f"COL_STL_{uuid.uuid4().hex[:6]}"
 
     async with AsyncSessionLocal() as session:
         # Seed an active collector and a stale collector
         c_active = Collector(
-            collector_id="COL_ACTIVE_01",
+            collector_id=cid_active,
             tenant_id="ORG_001",
             host_identifier="win-host-active",
             version="1.0.0",
@@ -118,7 +120,7 @@ async def test_collector_heartbeat_and_stale_detection():
             last_heartbeat=now_utc
         )
         c_stale = Collector(
-            collector_id="COL_STALE_02",
+            collector_id=cid_stale,
             tenant_id="ORG_001",
             host_identifier="win-host-stale",
             version="1.0.0",
@@ -140,15 +142,15 @@ async def test_collector_heartbeat_and_stale_detection():
         cols = {c["collector_id"]: c for c in resp.json()}
 
         # Verify active collector is Online
-        assert "COL_ACTIVE_01" in cols
-        assert cols["COL_ACTIVE_01"]["status"] == "Online"
-        assert cols["COL_ACTIVE_01"]["cpu_usage"] == 1.2
-        assert cols["COL_ACTIVE_01"]["memory_usage"] == 38.5
+        assert cid_active in cols
+        assert cols[cid_active]["status"] == "Online"
+        assert cols[cid_active]["cpu_usage"] == 1.2
+        assert cols[cid_active]["memory_usage"] == 38.5
 
         # Verify stale collector is detected and dynamically reported as Offline
-        assert "COL_STALE_02" in cols
-        assert cols["COL_STALE_02"]["status"] == "Offline"
-        assert cols["COL_STALE_02"]["pending_buffered"] == 3
+        assert cid_stale in cols
+        assert cols[cid_stale]["status"] == "Offline"
+        assert cols[cid_stale]["pending_buffered"] == 3
 
     print("✅ Collector heartbeat tracking and 45s stale detection verified.")
 

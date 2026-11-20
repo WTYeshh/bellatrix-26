@@ -19,39 +19,44 @@ _stress_stop_event = threading.Event()
 _stress_threads = []
 _active_stress = False
 
-def _cpu_burner(duration_seconds: int = 10):
+def _cpu_burner(duration_seconds: int = 6):
     global _active_stress
     _active_stress = True
     start = time.time()
     while not _stress_stop_event.is_set() and (time.time() - start) < duration_seconds:
-        # Safe mathematical computations to raise CPU utilization
-        _ = [x ** 2 for x in range(10000)]
+        # Safe mathematical computations to raise CPU utilization temporarily
+        _ = sum(x * x for x in range(20000))
+        # Micro-yield to ensure system processes remain completely responsive
+        time.sleep(0.0005)
     _active_stress = False
 
 @router.post("/cpu-stress")
 async def trigger_cpu_stress(
-    duration: int = 12,
+    duration: int = 6,
     current_user: User = Depends(get_current_user)
 ):
     """
-    Runs a safe, time-bounded CPU load on the local demonstration machine.
-    Has a hard duration cap and an immediate STOP control.
+    Runs a safe, controlled, time-bounded CPU load on the local demonstration machine.
+    Hard duration cap at 8 seconds, maximum 2 cores, immediately interruptible via /stop.
     """
     global _stress_stop_event, _stress_threads
     _stress_stop_event.clear()
     
-    # Run in 2 threads to create measurable CPU activity without locking system
-    t1 = threading.Thread(target=_cpu_burner, args=(min(30, duration),), daemon=True)
-    t2 = threading.Thread(target=_cpu_burner, args=(min(30, duration),), daemon=True)
+    safe_duration = min(8, max(1, duration))
+    # Run in 2 threads (max 2 cores) to create measurable CPU activity safely
+    t1 = threading.Thread(target=_cpu_burner, args=(safe_duration,), daemon=True)
+    t2 = threading.Thread(target=_cpu_burner, args=(safe_duration,), daemon=True)
     _stress_threads = [t1, t2]
     t1.start()
     t2.start()
 
     return {
         "status": "Running",
-        "scenario": "Controlled Local CPU Stress Test",
-        "duration_seconds": min(30, duration),
-        "message": f"CPU workload started for {min(30, duration)} seconds. Local AIOps and psutil will detect real CPU rise."
+        "scenario": "Controlled Safe Local CPU Stress Test",
+        "duration_seconds": safe_duration,
+        "max_cores": 2,
+        "capped_at_seconds": 8,
+        "message": f"Controlled CPU stress started for {safe_duration}s (max 2 cores). Real psutil hardware metrics and AIOps will detect real CPU rise."
     }
 
 @router.post("/stop")
