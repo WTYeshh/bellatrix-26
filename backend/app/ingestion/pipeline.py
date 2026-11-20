@@ -40,7 +40,7 @@ STRICT_ALLOWED_FIELDS = {
 def verify_payload_hash(exact_json: str, expected_hash: str) -> bool:
     """Computes SHA-256 over exact transmitted JSON string to verify integrity."""
     if not exact_json or not expected_hash:
-        return True  # If client didn't supply hash, accept payload but mark unverified
+        return False  # Strict verification: fail if exact json or hash missing
     calculated = hashlib.sha256(exact_json.encode("utf-8")).hexdigest()
     return calculated == expected_hash
 

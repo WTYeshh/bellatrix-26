@@ -92,6 +92,35 @@ def test_egress_proof_sha256_verification():
     assert bundle["payload_to_send"]["payload_hash"] == expected_hash
     print("✅ SHA-256 Egress Proof hash verification verified.")
 
+def test_fail_closed_privacy_gate_blocks_transmission():
+    """TEST: Privacy engine fail-closed gate blocks transmission if unapproved field or unredacted secret escapes."""
+    engine = PrivacyEngine()
+    
+    # 1. Unapproved key escaping into payload
+    corrupt_payload = {
+        "payload_id": "TEST_LEAK",
+        "tenant_id": "ORG_001",
+        "source_id": "NODE_LEAK",
+        "cpu_usage": 50.0,
+        "raw_leaked_password": "PlaintextPassword123"
+    }
+    is_valid, err = engine.validate_for_egress(corrupt_payload)
+    assert is_valid is False
+    assert "not on the approved allow-list" in err
+
+    # 2. Unredacted credential pattern escaping into string field
+    unredacted_payload = {
+        "payload_id": "TEST_LEAK_2",
+        "tenant_id": "ORG_001",
+        "source_id": "NODE_LEAK_2",
+        "cpu_usage": 50.0,
+        "event_category": "Failed login password=SecretPassword123"
+    }
+    is_valid_sec, err_sec = engine.validate_for_egress(unredacted_payload)
+    assert is_valid_sec is False
+    assert "Unredacted credential pattern detected" in err_sec
+    print("✅ Fail-closed privacy gate blocking verified.")
+
 if __name__ == "__main__":
     test_collector_metrics_collection()
     test_privacy_strict_allow_list_enforcement()

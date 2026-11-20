@@ -72,6 +72,24 @@ class Tier1Collector:
         payload_to_send = proof_bundle["payload_to_send"]
         proof_record = proof_bundle["proof_record"]
 
+        # 6b. FAIL-CLOSED PRIVACY GATE: Block transmission if policy validation fails
+        is_valid, priv_err = self.privacy_engine.validate_for_egress(payload_to_send)
+        if not is_valid:
+            proof_record["transmission_status"] = f"BLOCKED_BY_PRIVACY: {priv_err}"
+            self.storage.record_proof(proof_record, "Blocked")
+            return {
+                "payload_id": payload_id,
+                "success": False,
+                "blocked_by_privacy": True,
+                "error": priv_err,
+                "approved_fields": approved_fields,
+                "dropped_fields": dropped_or_redacted_fields,
+                "local_anomalies": local_anomalies,
+                "payload_hash": proof_record["payload_hash"],
+                "exact_json": proof_record["exact_transmitted_json"],
+                "pending_buffer_count": self.storage.count_pending()
+            }
+
         # 7. TRANSMIT OR BUFFER LOCALLY (RESILIENCE)
         success, response = self.client.send_metadata(payload_to_send)
 

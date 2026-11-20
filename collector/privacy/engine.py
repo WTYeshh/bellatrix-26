@@ -1,6 +1,6 @@
 import re
 import hashlib
-from typing import Dict, Any, Tuple, List, Set
+from typing import Dict, Any, Tuple, List, Set, Optional
 
 class PrivacyEngine:
     # Explicit field allow-list per specification
@@ -26,7 +26,7 @@ class PrivacyEngine:
 
     # Secret detection regex patterns
     SECRET_PATTERNS = [
-        re.compile(r"(?i)(password|passwd|pwd)\s*[:=]\s*['\"]?([^'\"\\s]+)"),
+        re.compile(r"(?i)(password|passwd|pwd)\s*[:=]\s*['\"]?([^'\"\s]+)"),
         re.compile(r"(?i)(api[_-]?key|secret|token)\s*[:=]\s*['\"]?([a-zA-Z0-9_\-]{16,})"),
         re.compile(r"(?i)bearer\s+[a-zA-Z0-9\-\._~\+\/]+=*"),
         re.compile(r"-----BEGIN (?:RSA )?PRIVATE KEY-----"),
@@ -96,3 +96,19 @@ class PrivacyEngine:
                 dropped_or_redacted_fields.append(key)
 
         return approved_payload, approved_fields, dropped_or_redacted_fields
+
+    def validate_for_egress(self, payload: Dict[str, Any]) -> Tuple[bool, Optional[str]]:
+        """
+        Fail-closed privacy validation gate.
+        Ensures NO unapproved keys or unredacted secrets exist in payload before transmission.
+        If validation fails, transmission MUST BE BLOCKED.
+        """
+        proof_keys = {"payload_hash", "applied_policy", "approved_fields", "redacted_fields", "exact_transmitted_json"}
+        for k, v in payload.items():
+            if k not in self.ALLOWED_METADATA_FIELDS and k not in proof_keys:
+                return False, f"Privacy policy violation: Field '{k}' is not on the approved allow-list."
+            if isinstance(v, str):
+                for pat in self.SECRET_PATTERNS:
+                    if pat.search(v) and "[REDACTED_SECRET]" not in v:
+                        return False, f"Privacy policy violation: Unredacted credential pattern detected in field '{k}'."
+        return True, None
