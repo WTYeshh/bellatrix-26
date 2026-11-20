@@ -193,6 +193,7 @@ const CommandCenter = (() => {
 
         try {
             data = await AegisAPI.get('/dashboard/summary');
+            showSimBanner(data.simulated === true);
         } catch {
             // Backend not available — use simulated placeholder data
             data = getSimulatedData();

@@ -1,406 +1,1118 @@
 /**
- * AEGIS Module Stubs — Placeholder pages for all navigation modules.
- * Each module gets a proper implementation in later milestones.
+ * AEGIS Module Implementations — Fully Connected to Real Backend APIs
+ * Live telemetry, Egress Proof verification, Incident DNA, AIOps, and Recovery Simulation.
  */
 
-function createModulePage(title, subtitle, icon, sections = []) {
-    const sectionsHTML = sections.map(s => `
-        <div class="card" style="margin-bottom:var(--space-4);">
-            <div class="card-header">
-                <span class="card-title">${s.title}</span>
-                ${s.badge ? `<span class="badge badge-accent">${s.badge}</span>` : ''}
-            </div>
-            <div>${s.content}</div>
-        </div>`).join('');
-
-    return `
-        <div class="page-header">
-            <h1 class="page-title">${title}</h1>
-            <p class="page-subtitle">${subtitle}</p>
-        </div>
-        <div class="sim-banner">
-            ${AegisIcons.alertTriangle()}
-            <span>Module under development — Backend integration pending. Layout and structure are functional.</span>
-        </div>
-        ${sectionsHTML || `
-        <div class="empty-state">
-            ${icon}
-            <h3>${title}</h3>
-            <p>This module will be connected to live backend APIs in upcoming milestones.</p>
-        </div>`}`;
+function escapeHtml(str) {
+    if (str === null || str === undefined) return '';
+    const d = document.createElement('div');
+    d.textContent = String(str);
+    return d.innerHTML;
 }
 
-// Infrastructure Monitoring
+// ==========================================
+// 1. INFRASTRUCTURE MONITORING
+// ==========================================
 const InfraMonitoring = {
-    render(container) {
-        container.innerHTML = createModulePage(
-            'Infrastructure Monitoring',
-            'Server health, resource utilization, and anomaly detection',
-            AegisIcons.server(),
-            [
-                {
-                    title: 'Registered Servers',
-                    badge: 'Milestone 7',
-                    content: `
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead><tr>
-                                <th>Source ID</th><th>Host</th><th>CPU</th><th>Memory</th><th>Disk</th><th>Health</th><th>Last Seen</th>
-                            </tr></thead>
-                            <tbody id="infra-table-body">
-                                <tr><td colspan="7" class="text-muted" style="text-align:center;padding:var(--space-6);">
-                                    Awaiting collector data — connect a Tier 1 collector to see live metrics
-                                </td></tr>
-                            </tbody>
-                        </table>
-                    </div>`
-                }
-            ]
-        );
-    }
-};
-
-// Network Monitoring
-const NetworkMonitoring = {
-    render(container) {
-        container.innerHTML = createModulePage(
-            'Network Monitoring',
-            'Bandwidth, latency, packet loss, and connectivity health',
-            AegisIcons.network(),
-            [
-                {
-                    title: 'Network Health Overview',
-                    badge: 'Milestone 7',
-                    content: `
-                    <div class="stats-grid" style="margin-bottom:0;">
-                        <div class="stat-card">
-                            <div class="stat-icon teal">${AegisIcons.wifi()}</div>
-                            <div class="stat-content">
-                                <div class="stat-label">Avg Latency</div>
-                                <div class="stat-value">— ms</div>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon fair">${AegisIcons.activity()}</div>
-                            <div class="stat-content">
-                                <div class="stat-label">Packet Loss</div>
-                                <div class="stat-value">— %</div>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon accent">${AegisIcons.network()}</div>
-                            <div class="stat-content">
-                                <div class="stat-label">Bandwidth</div>
-                                <div class="stat-value">— Mbps</div>
-                            </div>
-                        </div>
-                        <div class="stat-card">
-                            <div class="stat-icon excellent">${AegisIcons.globe()}</div>
-                            <div class="stat-content">
-                                <div class="stat-label">Connectivity</div>
-                                <div class="stat-value">—</div>
-                            </div>
-                        </div>
-                    </div>`
-                }
-            ]
-        );
-    }
-};
-
-// Security Monitoring
-const SecurityMonitoring = {
-    render(container) {
-        container.innerHTML = createModulePage(
-            'Security Monitoring',
-            'Authentication failures, suspicious activity, and threat detection',
-            AegisIcons.lock(),
-            [
-                {
-                    title: 'Security Alerts',
-                    badge: 'Milestone 7',
-                    content: `
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead><tr>
-                                <th>Severity</th><th>Event</th><th>Source</th><th>Count</th><th>Time</th><th>Status</th>
-                            </tr></thead>
-                            <tbody>
-                                <tr><td colspan="6" class="text-muted" style="text-align:center;padding:var(--space-6);">
-                                    No security events — connect collector for real-time detection
-                                </td></tr>
-                            </tbody>
-                        </table>
-                    </div>`
-                }
-            ]
-        );
-    }
-};
-
-// Collector Management
-const CollectorManagement = {
-    render(container) {
-        container.innerHTML = createModulePage(
-            'Collector Management',
-            'Monitor and manage Tier 1 collectors across your infrastructure',
-            AegisIcons.radio(),
-            [
-                {
-                    title: 'Registered Collectors',
-                    badge: 'Milestone 5',
-                    content: `
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead><tr>
-                                <th>Collector ID</th><th>Host</th><th>Version</th><th>Status</th>
-                                <th>Last Heartbeat</th><th>Buffered</th><th>Config</th>
-                            </tr></thead>
-                            <tbody>
-                                <tr><td colspan="7" class="text-muted" style="text-align:center;padding:var(--space-6);">
-                                    No collectors registered — start a Tier 1 collector to see it here
-                                </td></tr>
-                            </tbody>
-                        </table>
-                    </div>`
-                }
-            ]
-        );
-    }
-};
-
-// Incident DNA
-const IncidentDNA = {
-    render(container) {
-        container.innerHTML = createModulePage(
-            'Incident DNA',
-            'Correlated incidents, alert grouping, and root cause analysis',
-            AegisIcons.dna(),
-            [
-                {
-                    title: 'Active Incidents',
-                    badge: 'Milestone 8',
-                    content: `<div class="empty-state" style="padding:var(--space-6);">
-                        <p class="text-sm text-muted">Incident correlation engine will group related alerts and display incident timelines.</p>
-                    </div>`
-                }
-            ]
-        );
-    }
-};
-
-// AI Insights
-const AIInsights = {
-    render(container) {
-        container.innerHTML = createModulePage(
-            'AI Insights',
-            'Anomaly detection, explainable recommendations, and AIOps analysis',
-            AegisIcons.brain(),
-            [
-                {
-                    title: 'AIOps Pipeline Status',
-                    content: `
-                    <div class="flex gap-4" style="flex-wrap:wrap;">
-                        <div class="badge badge-accent">OBSERVE — Active</div>
-                        <div class="badge badge-accent">DETECT — Active</div>
-                        <div class="badge badge-info">CORRELATE — Pending data</div>
-                        <div class="badge badge-info">RECOMMEND — Pending data</div>
-                        <div class="badge badge-info">ACT — Requires approval</div>
-                    </div>`
-                },
-                {
-                    title: 'Recent Anomalies',
-                    badge: 'Milestone 8',
-                    content: `<div class="empty-state" style="padding:var(--space-6);">
-                        <p class="text-sm text-muted">AIOps engine will display detected anomalies with baselines, deviations, and evidence.</p>
-                    </div>`
-                }
-            ]
-        );
-    }
-};
-
-// Privacy Passport
-const PrivacyPassport = {
-    render(container) {
-        container.innerHTML = createModulePage(
-            'Privacy Passport',
-            'Data classification, privacy policies, and field-level controls',
-            AegisIcons.fingerprint(),
-            [
-                {
-                    title: 'Active Privacy Policies',
-                    badge: 'Milestone 4',
-                    content: `<div class="empty-state" style="padding:var(--space-6);">
-                        <p class="text-sm text-muted">Privacy engine configuration, field allow-lists, and redaction rules will appear here.</p>
-                    </div>`
-                }
-            ]
-        );
-    }
-};
-
-// Egress Proof
-const EgressProof = {
-    render(container) {
-        container.innerHTML = createModulePage(
-            'Egress Proof',
-            'Verifiable proof of every outgoing payload — what was sent, what was redacted',
-            AegisIcons.fileCheck(),
-            [
-                {
-                    title: 'Transmission Log',
-                    badge: 'Milestone 4',
-                    content: `
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead><tr>
-                                <th>Payload ID</th><th>Tenant</th><th>Source</th><th>Timestamp</th>
-                                <th>Approved Fields</th><th>Redacted</th><th>Hash</th><th>Status</th>
-                            </tr></thead>
-                            <tbody>
-                                <tr><td colspan="8" class="text-muted" style="text-align:center;padding:var(--space-6);">
-                                    No egress records — connect collector with privacy pipeline enabled
-                                </td></tr>
-                            </tbody>
-                        </table>
-                    </div>`
-                }
-            ]
-        );
-    }
-};
-
-// Audit Center
-const AuditCenter = {
-    render(container) {
-        container.innerHTML = createModulePage(
-            'Audit Center',
-            'Complete audit trail of all system operations and data access',
-            AegisIcons.clipboardList(),
-            [
-                {
-                    title: 'Audit Log',
-                    badge: 'Milestone 9',
-                    content: `
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead><tr>
-                                <th>Timestamp</th><th>Actor</th><th>Action</th><th>Target</th><th>Result</th>
-                            </tr></thead>
-                            <tbody>
-                                <tr><td colspan="5" class="text-muted" style="text-align:center;padding:var(--space-6);">
-                                    Audit log entries will appear as system operations are performed
-                                </td></tr>
-                            </tbody>
-                        </table>
-                    </div>`
-                }
-            ]
-        );
-    }
-};
-
-// Recovery Simulator
-const RecoverySimulator = {
-    render(container) {
-        container.innerHTML = createModulePage(
-            'Recovery Simulator',
-            'Safe remediation workflows with human approval and rollback tracking',
-            AegisIcons.rotateCcw(),
-            [
-                {
-                    title: 'Recovery Workflow',
-                    badge: 'Milestone 9',
-                    content: `
-                    <div style="display:flex;gap:var(--space-3);flex-wrap:wrap;padding:var(--space-2) 0;">
-                        <div class="badge badge-accent">1. AI Recommendation</div>
-                        <span class="text-muted">→</span>
-                        <div class="badge badge-info">2. Engineer Review</div>
-                        <span class="text-muted">→</span>
-                        <div class="badge badge-info">3. Policy Validation</div>
-                        <span class="text-muted">→</span>
-                        <div class="badge badge-info">4. Human Approval</div>
-                        <span class="text-muted">→</span>
-                        <div class="badge badge-info">5. Safe Simulation</div>
-                        <span class="text-muted">→</span>
-                        <div class="badge badge-info">6. Audit & Rollback</div>
+    async render(container) {
+        container.innerHTML = `
+            <div class="page-header">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="page-title">Infrastructure Monitoring</h1>
+                        <p class="page-subtitle">Real-time host metrics, CPU/memory telemetry, and health states</p>
                     </div>
-                    <div class="empty-state" style="padding:var(--space-6);">
-                        <p class="text-sm text-muted">Recovery simulator will execute safe remediation workflows after AIOps integration.</p>
-                    </div>`
-                }
-            ]
-        );
+                    <button class="btn btn-secondary btn-sm" onclick="InfraMonitoring.refresh()">
+                        ${AegisIcons.refresh()} Refresh
+                    </button>
+                </div>
+            </div>
+            <div id="infra-content">
+                <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
+            </div>`;
+        await this.load();
+    },
+
+    async refresh() {
+        await this.load();
+        AegisToast.info('Infrastructure metrics refreshed');
+    },
+
+    async load() {
+        const el = document.getElementById('infra-content');
+        if (!el) return;
+
+        try {
+            const data = await AegisAPI.get('/infrastructure');
+            const servers = data.servers || [];
+
+            if (servers.length === 0) {
+                el.innerHTML = `
+                    <div class="card">
+                        <div class="empty-state">
+                            ${AegisIcons.server()}
+                            <h3>No Active Servers Reported</h3>
+                            <p>Tier 1 collector telemetry has not yet been received. Start the collector daemon to ingest live host metrics.</p>
+                        </div>
+                    </div>`;
+                return;
+            }
+
+            el.innerHTML = `
+                <div class="stats-grid" style="margin-bottom:var(--space-6);">
+                    <div class="stat-card">
+                        <div class="stat-icon teal">${AegisIcons.server()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Total Servers</div>
+                            <div class="stat-value">${servers.length}</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon accent">${AegisIcons.cpu()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Fleet Avg CPU</div>
+                            <div class="stat-value">${Math.round(servers.reduce((a, b) => a + b.cpu, 0) / servers.length)}%</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon good">${AegisIcons.activity()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Fleet Avg Memory</div>
+                            <div class="stat-value">${Math.round(servers.reduce((a, b) => a + b.memory, 0) / servers.length)}%</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon excellent">${AegisIcons.shieldCheck()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Healthy Hosts</div>
+                            <div class="stat-value">${servers.filter(s => s.health === 'Excellent' || s.health === 'Good').length}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Live Server Fleet Telemetry</span>
+                        <span class="badge badge-accent">Live DB Ingestion</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th>Source ID</th><th>Host Identifier</th><th>Collector ID</th>
+                                <th>CPU Usage</th><th>Memory</th><th>Disk</th><th>Health State</th><th>Last Seen</th>
+                            </tr></thead>
+                            <tbody>
+                                ${servers.map(s => {
+                                    const h = (s.health || 'Good').toLowerCase();
+                                    return `
+                                    <tr>
+                                        <td class="mono"><strong>${escapeHtml(s.source_id)}</strong></td>
+                                        <td>${escapeHtml(s.host)}</td>
+                                        <td class="mono text-xs">${escapeHtml(s.collector_id)}</td>
+                                        <td>
+                                            <div class="flex items-center gap-2">
+                                                <span>${s.cpu}%</span>
+                                                <div style="width:60px;height:6px;background:var(--color-bg-tertiary);border-radius:3px;overflow:hidden;">
+                                                    <div style="width:${Math.min(100, s.cpu)}%;height:100%;background:${s.cpu > 80 ? 'var(--color-poor)' : 'var(--color-accent)'};"></div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td>${s.memory}%</td>
+                                        <td>${s.disk}%</td>
+                                        <td><span class="badge badge-${h}">${escapeHtml(s.health)}</span></td>
+                                        <td class="text-xs text-muted">${escapeHtml(s.last_seen)}</td>
+                                    </tr>`;
+                                }).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+        } catch (err) {
+            el.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        }
     }
 };
 
-// Organization Settings
-const OrgSettings = {
-    render(container) {
+// ==========================================
+// 2. NETWORK MONITORING
+// ==========================================
+const NetworkMonitoring = {
+    async render(container) {
+        container.innerHTML = `
+            <div class="page-header">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="page-title">Network Monitoring</h1>
+                        <p class="page-subtitle">Real TCP socket latency measurements, packet drop metrics, and pathway health</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="NetworkMonitoring.refresh()">
+                        ${AegisIcons.refresh()} Refresh
+                    </button>
+                </div>
+            </div>
+            <div id="network-content">
+                <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
+            </div>`;
+        await this.load();
+    },
+
+    async refresh() {
+        await this.load();
+        AegisToast.info('Network metrics refreshed');
+    },
+
+    async load() {
+        const el = document.getElementById('network-content');
+        if (!el) return;
+
+        try {
+            const data = await AegisAPI.get('/network');
+            el.innerHTML = `
+                <div class="stats-grid" style="margin-bottom:var(--space-6);">
+                    <div class="stat-card">
+                        <div class="stat-icon teal">${AegisIcons.wifi()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Measured Latency</div>
+                            <div class="stat-value">${data.avg_latency} ms</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon fair">${AegisIcons.activity()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Packet Loss</div>
+                            <div class="stat-value">${data.avg_packet_loss}%</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon accent">${AegisIcons.network()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Throughput Rate</div>
+                            <div class="stat-value">${data.bandwidth_mbps} Mbps</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon excellent">${AegisIcons.globe()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Network Status</div>
+                            <div class="stat-value">${escapeHtml(data.connectivity)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Recent Network Telemetry Samples</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th>Source ID</th><th>Latency</th><th>Packet Loss</th><th>Timestamp</th>
+                            </tr></thead>
+                            <tbody>
+                                ${(data.history || []).slice(0, 15).map(h => `
+                                <tr>
+                                    <td class="mono">${escapeHtml(h.source)}</td>
+                                    <td><strong>${h.latency_ms} ms</strong></td>
+                                    <td>${h.packet_loss}%</td>
+                                    <td class="text-xs text-muted">${escapeHtml(h.timestamp)}</td>
+                                </tr>`).join('') || `<tr><td colspan="4" class="text-muted" style="text-align:center;">Awaiting network data samples</td></tr>`}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+        } catch (err) {
+            el.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        }
+    }
+};
+
+// ==========================================
+// 3. SECURITY MONITORING
+// ==========================================
+const SecurityMonitoring = {
+    async render(container) {
+        container.innerHTML = `
+            <div class="page-header">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="page-title">Security Monitoring</h1>
+                        <p class="page-subtitle">Privacy-safe authentication summaries, threat levels, and brute-force detection</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button class="btn btn-secondary btn-sm" onclick="SecurityMonitoring.injectFailedLogins()">
+                            ${AegisIcons.zap()} Simulate Failed Logins
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="SecurityMonitoring.refresh()">
+                            ${AegisIcons.refresh()} Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div id="security-content">
+                <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
+            </div>`;
+        await this.load();
+    },
+
+    async injectFailedLogins() {
+        try {
+            await AegisAPI.post('/security/event', {
+                source_id: 'AUTH_GATEWAY_01',
+                event_category: 'Brute-Force Anomaly',
+                severity: 'High',
+                failed_login_count: 5,
+                description: 'Repeated authentication failures detected against auth-service'
+            });
+            AegisToast.warning('Security alert injected — check updated dashboard');
+            await this.load();
+        } catch (err) {
+            AegisToast.error(err.message);
+        }
+    },
+
+    async refresh() {
+        await this.load();
+        AegisToast.info('Security summaries refreshed');
+    },
+
+    async load() {
+        const el = document.getElementById('security-content');
+        if (!el) return;
+
+        try {
+            const data = await AegisAPI.get('/security');
+            const alerts = data.alerts || [];
+
+            el.innerHTML = `
+                <div class="stats-grid" style="margin-bottom:var(--space-6);">
+                    <div class="stat-card">
+                        <div class="stat-icon poor">${AegisIcons.lock()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Security Incidents</div>
+                            <div class="stat-value">${data.total_alerts}</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon fair">${AegisIcons.alertTriangle()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Failed Auth Attempts</div>
+                            <div class="stat-value">${data.total_failures}</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon excellent">${AegisIcons.shieldCheck()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Raw Auth Logs Exported</div>
+                            <div class="stat-value">0</div>
+                            <div class="stat-change up">Retained locally by policy</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon accent">${AegisIcons.fingerprint()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Credential Protection</div>
+                            <div class="stat-value">Active</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Sanitized Security Alert Feed</span>
+                        <span class="badge badge-accent">Summaries Only (No Raw Secrets)</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th>Severity</th><th>Event Category</th><th>Source</th><th>Failed Count</th><th>Description</th><th>Time</th>
+                            </tr></thead>
+                            <tbody>
+                                ${alerts.length === 0 ? `<tr><td colspan="6" class="text-muted" style="text-align:center;">No security anomalies detected. System operating within normal thresholds.</td></tr>` :
+                                alerts.map(a => `
+                                <tr>
+                                    <td><span class="badge badge-${(a.severity || 'medium').toLowerCase()}">${escapeHtml(a.severity)}</span></td>
+                                    <td><strong>${escapeHtml(a.event)}</strong></td>
+                                    <td class="mono">${escapeHtml(a.source)}</td>
+                                    <td>${a.count}</td>
+                                    <td>${escapeHtml(a.description)}</td>
+                                    <td class="text-xs text-muted">${escapeHtml(a.time)}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+        } catch (err) {
+            el.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        }
+    }
+};
+
+// ==========================================
+// 4. COLLECTOR MANAGEMENT
+// ==========================================
+const CollectorManagement = {
+    async render(container) {
+        container.innerHTML = `
+            <div class="page-header">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="page-title">Collector Fleet Management</h1>
+                        <p class="page-subtitle">Tier 1 local collector nodes, heartbeat telemetry, and buffer queue monitoring</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="CollectorManagement.refresh()">
+                        ${AegisIcons.refresh()} Refresh
+                    </button>
+                </div>
+            </div>
+            <div id="collector-content">
+                <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
+            </div>`;
+        await this.load();
+    },
+
+    async refresh() {
+        await this.load();
+        AegisToast.info('Collector fleet status refreshed');
+    },
+
+    async load() {
+        const el = document.getElementById('collector-content');
+        if (!el) return;
+
+        try {
+            const collectors = await AegisAPI.get('/collectors');
+            el.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Registered Customer Environment Collectors</span>
+                        <span class="badge badge-accent">${collectors.length} Nodes</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th>Collector ID</th><th>Host Identifier</th><th>Version</th><th>Status</th>
+                                <th>CPU / Mem</th><th>Last Heartbeat</th><th>Pending Buffer</th><th>Last Delivery</th>
+                            </tr></thead>
+                            <tbody>
+                                ${collectors.length === 0 ? `<tr><td colspan="8" class="text-muted" style="text-align:center;">No collectors registered. Run collector/main.py in your environment.</td></tr>` :
+                                collectors.map(c => `
+                                <tr>
+                                    <td class="mono"><strong>${escapeHtml(c.collector_id)}</strong></td>
+                                    <td>${escapeHtml(c.host_identifier)}</td>
+                                    <td><span class="badge badge-accent">v${escapeHtml(c.version)}</span></td>
+                                    <td>
+                                        <span class="badge badge-${c.status === 'Online' ? 'excellent' : 'poor'}">
+                                            <span class="status-dot ${c.status === 'Online' ? 'online' : 'offline'}"></span>
+                                            ${escapeHtml(c.status)}
+                                        </span>
+                                    </td>
+                                    <td class="text-xs">${c.cpu_usage}% / ${c.memory_usage}%</td>
+                                    <td class="text-xs text-muted">${escapeHtml(c.last_heartbeat)}</td>
+                                    <td>
+                                        <span class="badge ${c.pending_buffered > 0 ? 'badge-fair' : 'badge-good'}">
+                                            ${c.pending_buffered} queued
+                                        </span>
+                                    </td>
+                                    <td class="text-xs text-muted">${escapeHtml(c.last_delivery_success || 'None')}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+        } catch (err) {
+            el.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        }
+    }
+};
+
+// ==========================================
+// 5. INCIDENT DNA (ALERT CORRELATION)
+// ==========================================
+const IncidentDNA = {
+    async render(container) {
+        container.innerHTML = `
+            <div class="page-header">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="page-title">Incident DNA</h1>
+                        <p class="page-subtitle">Intelligent alert correlation, timeline reconstruction, and noise reduction</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="IncidentDNA.refresh()">
+                        ${AegisIcons.refresh()} Refresh
+                    </button>
+                </div>
+            </div>
+            <div id="dna-content">
+                <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
+            </div>`;
+        await this.load();
+    },
+
+    async refresh() {
+        await this.load();
+        AegisToast.info('Incident correlation state refreshed');
+    },
+
+    async resolve(incidentId) {
+        try {
+            await AegisAPI.post(`/incidents/${incidentId}/resolve`, {});
+            AegisToast.success(`Incident ${incidentId} marked as Resolved`);
+            await this.load();
+        } catch (err) {
+            AegisToast.error(err.message);
+        }
+    },
+
+    async load() {
+        const el = document.getElementById('dna-content');
+        if (!el) return;
+
+        try {
+            const incidents = await AegisAPI.get('/incidents');
+
+            if (incidents.length === 0) {
+                el.innerHTML = `
+                    <div class="card">
+                        <div class="empty-state">
+                            ${AegisIcons.dna()}
+                            <h3>Zero Active Correlated Incidents</h3>
+                            <p>Incident DNA is actively evaluating incoming telemetry. Disparate alerts will be correlated here automatically when an anomaly occurs.</p>
+                        </div>
+                    </div>`;
+                return;
+            }
+
+            el.innerHTML = incidents.map(inc => `
+                <div class="card" style="margin-bottom:var(--space-6);">
+                    <div class="card-header">
+                        <div>
+                            <div class="flex items-center gap-3">
+                                <span class="badge badge-${(inc.severity || 'medium').toLowerCase()}">${escapeHtml(inc.severity)}</span>
+                                <span class="card-title">${escapeHtml(inc.title)}</span>
+                                <span class="badge badge-good">${escapeHtml(inc.status)}</span>
+                            </div>
+                            <div class="text-xs text-muted" style="margin-top:4px;">
+                                Incident ID: <span class="mono">${escapeHtml(inc.incident_id)}</span> · Affected Service: <strong>${escapeHtml(inc.affected_service)}</strong> · Correlation Confidence: <strong>${Math.round(inc.confidence * 100)}%</strong>
+                            </div>
+                        </div>
+                        ${inc.status !== 'Resolved' ? `
+                        <button class="btn btn-secondary btn-sm" onclick="IncidentDNA.resolve('${escapeHtml(inc.incident_id)}')">
+                            ${AegisIcons.check()} Resolve Incident
+                        </button>` : ''}
+                    </div>
+
+                    <div class="grid grid-2 gap-4" style="margin-bottom:var(--space-4);">
+                        <div style="background:var(--color-bg-tertiary);padding:var(--space-4);border-radius:var(--radius-md);">
+                            <div class="text-xs text-muted uppercase font-semibold">Correlated Operational Factor</div>
+                            <div class="text-sm" style="margin-top:var(--space-1);">${escapeHtml(inc.likely_cause)}</div>
+                        </div>
+                        <div style="background:var(--color-bg-tertiary);padding:var(--space-4);border-radius:var(--radius-md);">
+                            <div class="text-xs text-muted uppercase font-semibold">Recommended Investigation</div>
+                            <div class="text-sm" style="margin-top:var(--space-1);">${escapeHtml(inc.recommended_investigation)}</div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <div class="text-xs text-muted uppercase font-semibold" style="margin-bottom:var(--space-2);">Incident Event Timeline</div>
+                        <div style="border-left:2px solid var(--color-border);padding-left:var(--space-4);margin-left:var(--space-2);">
+                            ${(inc.timeline || []).map(t => `
+                            <div style="margin-bottom:var(--space-3);position:relative;">
+                                <div style="position:absolute;left:-21px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--color-accent);"></div>
+                                <div class="text-sm font-medium">${escapeHtml(t.event)}</div>
+                                <div class="text-xs text-muted">${escapeHtml(t.details)} · <span class="mono">${escapeHtml(t.timestamp)}</span></div>
+                            </div>`).join('')}
+                        </div>
+                    </div>
+                </div>`).join('');
+        } catch (err) {
+            el.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        }
+    }
+};
+
+// ==========================================
+// 6. AI INSIGHTS
+// ==========================================
+const AIInsights = {
+    async render(container) {
+        container.innerHTML = `
+            <div class="page-header">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="page-title">Explainable AI Insights</h1>
+                        <p class="page-subtitle">Dual-engine statistical baselines (MAD, Z-Score) and Scikit-Learn Isolation Forest telemetry</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="AIInsights.refresh()">
+                        ${AegisIcons.refresh()} Refresh
+                    </button>
+                </div>
+            </div>
+            <div id="ai-content">
+                <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
+            </div>`;
+        await this.load();
+    },
+
+    async refresh() {
+        await this.load();
+        AegisToast.info('AIOps insights refreshed');
+    },
+
+    async load() {
+        const el = document.getElementById('ai-content');
+        if (!el) return;
+
+        try {
+            const [pipeline, anomalies, baselines] = await Promise.all([
+                AegisAPI.get('/aiops/pipeline-status'),
+                AegisAPI.get('/aiops/anomalies'),
+                AegisAPI.get('/aiops/baselines')
+            ]);
+
+            el.innerHTML = `
+                <!-- 5-Stage AIOps Roadmap -->
+                <div class="card" style="margin-bottom:var(--space-6);">
+                    <div class="card-header">
+                        <span class="card-title">AIOps Autonomous Lifecycle</span>
+                        <span class="badge badge-accent">Dual-Engine Active</span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:var(--space-3);">
+                        <div style="background:var(--color-bg-tertiary);padding:var(--space-3);border-radius:var(--radius-md);">
+                            <div class="badge badge-accent" style="margin-bottom:var(--space-1);">1. OBSERVE</div>
+                            <div class="text-xs text-muted">${escapeHtml(pipeline.observe.description)}</div>
+                        </div>
+                        <div style="background:var(--color-bg-tertiary);padding:var(--space-3);border-radius:var(--radius-md);">
+                            <div class="badge badge-accent" style="margin-bottom:var(--space-1);">2. DETECT</div>
+                            <div class="text-xs text-muted">${escapeHtml(pipeline.detect.description)}</div>
+                        </div>
+                        <div style="background:var(--color-bg-tertiary);padding:var(--space-3);border-radius:var(--radius-md);">
+                            <div class="badge badge-accent" style="margin-bottom:var(--space-1);">3. CORRELATE</div>
+                            <div class="text-xs text-muted">${escapeHtml(pipeline.correlate.description)}</div>
+                        </div>
+                        <div style="background:var(--color-bg-tertiary);padding:var(--space-3);border-radius:var(--radius-md);">
+                            <div class="badge badge-accent" style="margin-bottom:var(--space-1);">4. RECOMMEND</div>
+                            <div class="text-xs text-muted">${escapeHtml(pipeline.recommend.description)}</div>
+                        </div>
+                        <div style="background:var(--color-bg-tertiary);padding:var(--space-3);border-radius:var(--radius-md);">
+                            <div class="badge badge-good" style="margin-bottom:var(--space-1);">5. ACT (SIM)</div>
+                            <div class="text-xs text-muted">${escapeHtml(pipeline.act.description)}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Detected Anomalies with Baselines -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Detected Metric Anomalies & Statistical Deviations</span>
+                        <span class="badge badge-good">${anomalies.length} Recorded</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th>Anomaly ID</th><th>Source</th><th>Metric</th><th>Observed</th>
+                                <th>Baseline</th><th>Score</th><th>Severity</th><th>Explainable Evidence</th>
+                            </tr></thead>
+                            <tbody>
+                                ${anomalies.length === 0 ? `<tr><td colspan="8" class="text-muted" style="text-align:center;">No active anomalies. Current telemetry conforms to historical baselines.</td></tr>` :
+                                anomalies.map(a => `
+                                <tr>
+                                    <td class="mono text-xs">${escapeHtml(a.anomaly_id)}</td>
+                                    <td class="mono"><strong>${escapeHtml(a.source_id)}</strong></td>
+                                    <td>${escapeHtml(a.metric)}</td>
+                                    <td><strong style="color:var(--color-poor);">${a.observed_value}</strong></td>
+                                    <td class="text-muted">${a.baseline_value}</td>
+                                    <td><span class="badge badge-accent">${Math.round(a.anomaly_score * 100)}%</span></td>
+                                    <td><span class="badge badge-${(a.severity || 'medium').toLowerCase()}">${escapeHtml(a.severity)}</span></td>
+                                    <td class="text-xs">${escapeHtml(a.reason)}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+        } catch (err) {
+            el.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        }
+    }
+};
+
+// ==========================================
+// 7. PRIVACY PASSPORT
+// ==========================================
+const PrivacyPassport = {
+    async render(container) {
+        container.innerHTML = `
+            <div class="page-header">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="page-title">Privacy Passport</h1>
+                        <p class="page-subtitle">Strict field allow-listing, secret redactor configuration, and local retention policies</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="PrivacyPassport.refresh()">
+                        ${AegisIcons.refresh()} Refresh
+                    </button>
+                </div>
+            </div>
+            <div id="privacy-content">
+                <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
+            </div>`;
+        await this.load();
+    },
+
+    async refresh() {
+        await this.load();
+        AegisToast.info('Privacy policy status refreshed');
+    },
+
+    async load() {
+        const el = document.getElementById('privacy-content');
+        if (!el) return;
+
+        try {
+            const [policies, stats] = await Promise.all([
+                AegisAPI.get('/privacy/policies'),
+                AegisAPI.get('/privacy/stats')
+            ]);
+            const policy = policies[0] || {};
+
+            el.innerHTML = `
+                <div class="stats-grid" style="margin-bottom:var(--space-6);">
+                    <div class="stat-card">
+                        <div class="stat-icon excellent">${AegisIcons.shieldCheck()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Compliance Status</div>
+                            <div class="stat-value">${escapeHtml(stats.compliance_status)}</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon accent">${AegisIcons.fileCheck()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Payloads Inspected</div>
+                            <div class="stat-value">${stats.total_payloads_inspected}</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon good">${AegisIcons.lock()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Sensitive Fields Dropped</div>
+                            <div class="stat-value">${stats.total_sensitive_fields_blocked}</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon teal">${AegisIcons.database ? AegisIcons.database() : AegisIcons.server()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Raw Data Boundary</div>
+                            <div class="stat-value" style="font-size:var(--text-lg);">Customer Local</div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card" style="margin-bottom:var(--space-6);">
+                    <div class="card-header">
+                        <span class="card-title">Enforced Field Allow-List (Strict Allow-List Policy)</span>
+                        <span class="badge badge-accent">Explicit Approval Required</span>
+                    </div>
+                    <p class="text-sm text-muted" style="margin-bottom:var(--space-4);">
+                        Only these explicit fields are permitted to cross the customer boundary. All unknown keys, raw logs, passwords, and environment dumps are rejected by default.
+                    </p>
+                    <div class="field-list">
+                        ${(policy.allowed_fields || []).map(f => `<span class="field-tag approved">✓ ${escapeHtml(f)}</span>`).join('')}
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Secret Redaction Engine Rules</span>
+                        <span class="badge badge-excellent">Automatic Pre-Egress Scrubbing</span>
+                    </div>
+                    <p class="text-sm text-muted" style="margin-bottom:var(--space-4);">
+                        Regex patterns applied against all string values. Any detected credentials are automatically redacted with <code>[REDACTED_SECRET]</code> prior to cryptographic hashing.
+                    </p>
+                    <pre class="payload-json" style="max-height:180px;">${escapeHtml(JSON.stringify(policy.redaction_rules || {}, null, 2))}</pre>
+                </div>`;
+        } catch (err) {
+            el.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        }
+    }
+};
+
+// ==========================================
+// 8. EGRESS PROOF (VERIFIABLE PROOF LOG)
+// ==========================================
+const EgressProof = {
+    async render(container) {
+        container.innerHTML = `
+            <div class="page-header">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="page-title">Egress Proof</h1>
+                        <p class="page-subtitle">Verifiable proof of every outgoing payload — exact canonical JSON, SHA-256 hash, and server ACK</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="EgressProof.refresh()">
+                        ${AegisIcons.refresh()} Refresh
+                    </button>
+                </div>
+            </div>
+            <div id="egress-content">
+                <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
+            </div>`;
+        await this.load();
+    },
+
+    async refresh() {
+        await this.load();
+        AegisToast.info('Egress proof log refreshed');
+    },
+
+    showDetails(payloadId, exactJson, hash, verified) {
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay active';
+        modal.innerHTML = `
+            <div class="modal" style="max-width:700px;">
+                <div class="modal-header">
+                    <div>
+                        <h3 class="modal-title">Egress Proof Verification</h3>
+                        <div class="text-xs text-muted mono">${escapeHtml(payloadId)}</div>
+                    </div>
+                    <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">✕</button>
+                </div>
+                <div style="margin-bottom:var(--space-4);">
+                    <div class="text-xs text-muted uppercase font-semibold">SHA-256 Payload Hash</div>
+                    <div class="mono text-xs" style="background:var(--color-bg-primary);padding:var(--space-3);border-radius:var(--radius-md);word-break:break-all;color:var(--color-accent);margin-top:4px;">
+                        ${escapeHtml(hash)}
+                    </div>
+                    <div style="margin-top:var(--space-2);">
+                        <span class="badge ${verified ? 'badge-excellent' : 'badge-poor'}">
+                            ${verified ? '✓ Cryptographically Verified & Intact' : '⚠ Hash Mismatch'}
+                        </span>
+                    </div>
+                </div>
+                <div>
+                    <div class="text-xs text-muted uppercase font-semibold" style="margin-bottom:4px;">Exact Transmitted Canonical JSON</div>
+                    <pre class="payload-json">${escapeHtml(JSON.stringify(JSON.parse(exactJson || '{}'), null, 2))}</pre>
+                </div>
+            </div>`;
+        document.body.appendChild(modal);
+    },
+
+    async load() {
+        const el = document.getElementById('egress-content');
+        if (!el) return;
+
+        try {
+            const proofs = await AegisAPI.get('/egress-proof');
+
+            el.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Cryptographic Transmission Proof Log</span>
+                        <span class="badge badge-accent">${proofs.length} Records</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th>Payload ID</th><th>Source ID</th><th>SHA-256 Hash</th><th>Approved Fields</th>
+                                <th>Dropped / Redacted</th><th>Status</th><th>Verification</th><th>Action</th>
+                            </tr></thead>
+                            <tbody>
+                                ${proofs.length === 0 ? `<tr><td colspan="8" class="text-muted" style="text-align:center;">No egress records transmitted yet. Collector activity will populate this live log.</td></tr>` :
+                                proofs.map(p => `
+                                <tr>
+                                    <td class="mono text-xs"><strong>${escapeHtml(p.payload_id.slice(0, 12))}...</strong></td>
+                                    <td class="mono">${escapeHtml(p.source_id)}</td>
+                                    <td class="mono text-xs" title="${escapeHtml(p.payload_hash)}">${escapeHtml(p.payload_hash.slice(0, 16))}...</td>
+                                    <td><span class="badge badge-excellent">${(p.approved_fields || []).length} approved</span></td>
+                                    <td><span class="badge badge-fair">${(p.redacted_fields || []).length} blocked</span></td>
+                                    <td class="text-xs">${escapeHtml(p.transmission_status)}</td>
+                                    <td>
+                                        <span class="badge ${p.hash_verified ? 'badge-excellent' : 'badge-poor'}">
+                                            ${p.hash_verified ? 'Verified ✓' : 'Mismatch ⚠'}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <button class="btn btn-secondary btn-sm" onclick='EgressProof.showDetails(${JSON.stringify(p.payload_id)}, ${JSON.stringify(p.exact_transmitted_json)}, ${JSON.stringify(p.payload_hash)}, ${p.hash_verified})'>
+                                            Inspect
+                                        </button>
+                                    </td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+        } catch (err) {
+            el.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        }
+    }
+};
+
+// ==========================================
+// 9. AUDIT CENTER
+// ==========================================
+const AuditCenter = {
+    async render(container) {
+        container.innerHTML = `
+            <div class="page-header">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="page-title">Audit Center</h1>
+                        <p class="page-subtitle">Immutable log of system actions, policy checks, recovery simulations, and security events</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="AuditCenter.refresh()">
+                        ${AegisIcons.refresh()} Refresh
+                    </button>
+                </div>
+            </div>
+            <div id="audit-content">
+                <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
+            </div>`;
+        await this.load();
+    },
+
+    async refresh() {
+        await this.load();
+        AegisToast.info('Audit trail refreshed');
+    },
+
+    async load() {
+        const el = document.getElementById('audit-content');
+        if (!el) return;
+
+        try {
+            const logs = await AegisAPI.get('/audit');
+            el.innerHTML = `
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">System Audit Log Records</span>
+                        <span class="badge badge-accent">${logs.length} Entries</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th>Timestamp (UTC)</th><th>Actor</th><th>Action</th><th>Target</th><th>Result</th><th>Details</th>
+                            </tr></thead>
+                            <tbody>
+                                ${logs.length === 0 ? `<tr><td colspan="6" class="text-muted" style="text-align:center;">No audit records found.</td></tr>` :
+                                logs.map(l => `
+                                <tr>
+                                    <td class="mono text-xs">${escapeHtml(l.timestamp_utc)}</td>
+                                    <td><strong>${escapeHtml(l.actor)}</strong></td>
+                                    <td>${escapeHtml(l.action)}</td>
+                                    <td class="mono text-xs">${escapeHtml(l.target)}</td>
+                                    <td><span class="badge ${l.result === 'Success' ? 'badge-excellent' : 'badge-poor'}">${escapeHtml(l.result)}</span></td>
+                                    <td class="text-xs text-muted mono">${escapeHtml(JSON.stringify(l.details))}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+        } catch (err) {
+            el.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        }
+    }
+};
+
+// ==========================================
+// 10. RECOVERY SIMULATOR
+// ==========================================
+const RecoverySimulator = {
+    async render(container) {
+        container.innerHTML = `
+            <div class="page-header">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h1 class="page-title">Recovery Simulator</h1>
+                        <p class="page-subtitle">Human-approved, safe operational remediation simulation with audit trails and rollback planning</p>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="RecoverySimulator.refresh()">
+                        ${AegisIcons.refresh()} Refresh
+                    </button>
+                </div>
+            </div>
+            <div id="recovery-content">
+                <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
+            </div>`;
+        await this.load();
+    },
+
+    async refresh() {
+        await this.load();
+        AegisToast.info('Recovery simulations refreshed');
+    },
+
+    async triggerSimulation(incidentId, recText) {
         const session = AegisAuth.getSession();
+        const approverName = session ? session.name : 'Veeresh M V';
+
+        try {
+            const res = await AegisAPI.post('/recovery/simulate', {
+                incident_id: incidentId,
+                recommendation_text: recText,
+                approver: approverName
+            });
+            AegisToast.success(`Recovery simulation ${res.simulation_id} executed successfully!`);
+            await this.load();
+        } catch (err) {
+            AegisToast.error(err.message);
+        }
+    },
+
+    async load() {
+        const el = document.getElementById('recovery-content');
+        if (!el) return;
+
+        try {
+            const [simulations, recommendations] = await Promise.all([
+                AegisAPI.get('/recovery'),
+                AegisAPI.get('/recommendations')
+            ]);
+
+            el.innerHTML = `
+                <!-- Controlled Workflow Guide -->
+                <div class="card" style="margin-bottom:var(--space-6);">
+                    <div class="card-header">
+                        <span class="card-title">Controlled Remediation Workflow</span>
+                        <span class="badge badge-accent">Zero Uncontrolled Production Actions</span>
+                    </div>
+                    <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;padding:var(--space-2) 0;">
+                        <span class="badge badge-accent">1. AIOps Detection</span>
+                        <span class="text-muted">→</span>
+                        <span class="badge badge-accent">2. Recommendation</span>
+                        <span class="text-muted">→</span>
+                        <span class="badge badge-accent">3. Policy Check</span>
+                        <span class="text-muted">→</span>
+                        <span class="badge badge-fair">4. Human Approval</span>
+                        <span class="text-muted">→</span>
+                        <span class="badge badge-good">5. Sandbox Simulation</span>
+                        <span class="text-muted">→</span>
+                        <span class="badge badge-excellent">6. Verified Rollback</span>
+                    </div>
+                </div>
+
+                <!-- Available Recommendations Awaiting Human Approval -->
+                <div class="card" style="margin-bottom:var(--space-6);">
+                    <div class="card-header">
+                        <span class="card-title">Remediation Proposals Awaiting Operator Approval</span>
+                        <span class="badge badge-fair">${recommendations.length} Pending</span>
+                    </div>
+                    ${recommendations.length === 0 ? `<div class="empty-state" style="padding:var(--space-6);"><p class="text-sm text-muted">All incidents currently nominal. No simulations pending approval.</p></div>` :
+                    recommendations.map(rec => `
+                    <div style="border:1px solid var(--color-border);padding:var(--space-4);border-radius:var(--radius-md);margin-bottom:var(--space-3);background:var(--color-bg-tertiary);">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <strong>${escapeHtml(rec.title)}</strong>
+                                <div class="text-xs text-muted">${escapeHtml(rec.reason)}</div>
+                            </div>
+                            <button class="btn btn-primary btn-sm" onclick='RecoverySimulator.triggerSimulation(${JSON.stringify(rec.incident_id || "INC-001")}, ${JSON.stringify(rec.suggested_action)})'>
+                                ${AegisIcons.check()} Approve & Simulate
+                            </button>
+                        </div>
+                        <div style="margin-top:var(--space-3);background:var(--color-bg-primary);padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);font-size:var(--text-xs);">
+                            <code>${escapeHtml(rec.suggested_action)}</code>
+                        </div>
+                    </div>`).join('')}
+                </div>
+
+                <!-- Simulation History & Rollback Logs -->
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Completed Recovery Simulations & Rollback Snapshots</span>
+                        <span class="badge badge-good">${simulations.length} Completed</span>
+                    </div>
+                    <div class="table-container">
+                        <table class="data-table">
+                            <thead><tr>
+                                <th>Simulation ID</th><th>Incident ID</th><th>Approver</th><th>Status</th>
+                                <th>Policy Check</th><th>Projected Impact</th><th>Rollback Plan</th>
+                            </tr></thead>
+                            <tbody>
+                                ${simulations.length === 0 ? `<tr><td colspan="7" class="text-muted" style="text-align:center;">No simulations run yet. Approve a proposal above to test.</td></tr>` :
+                                simulations.map(s => `
+                                <tr>
+                                    <td class="mono text-xs"><strong>${escapeHtml(s.simulation_id)}</strong></td>
+                                    <td class="mono text-xs">${escapeHtml(s.incident_id)}</td>
+                                    <td><strong>${escapeHtml(s.approver)}</strong></td>
+                                    <td><span class="badge badge-excellent">${escapeHtml(s.status)}</span></td>
+                                    <td><span class="badge badge-accent">${escapeHtml(s.policy_check)}</span></td>
+                                    <td class="text-xs">${escapeHtml(s.simulation_result)}</td>
+                                    <td class="text-xs text-muted mono">${escapeHtml(s.rollback_info)}</td>
+                                </tr>`).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>`;
+        } catch (err) {
+            el.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
+        }
+    }
+};
+
+// ==========================================
+// 11. ORGANIZATION SETTINGS
+// ==========================================
+const OrgSettings = {
+    async render(container) {
+        const session = AegisAuth.getSession();
+        let orgProfile = {
+            tenant_id: session?.orgId || 'ORG_001',
+            name: session?.org || 'AEGIS Demo Corp',
+            region: 'us-east-1',
+            timezone: 'UTC'
+        };
+
+        try {
+            orgProfile = await AegisAPI.get('/organizations/profile');
+        } catch {}
+
         container.innerHTML = `
             <div class="page-header">
                 <h1 class="page-title">Organization Settings</h1>
-                <p class="page-subtitle">Manage your organization, users, roles, and privacy policies</p>
+                <p class="page-subtitle">Multi-tenant identity, role-based access control, and regional data residency</p>
             </div>
-            <div class="card" style="margin-bottom:var(--space-4);">
+
+            <div class="card" style="margin-bottom:var(--space-6);">
                 <div class="card-header">
-                    <span class="card-title">Organization Profile</span>
+                    <span class="card-title">Tenant Identity & Profile</span>
+                    <span class="badge badge-excellent">Tenant Isolation Enforced</span>
                 </div>
                 <div class="grid grid-2 gap-4">
                     <div class="form-group">
                         <label class="form-label">Organization Name</label>
-                        <input class="form-input" value="${session?.org || 'AEGIS Demo Corp'}" readonly>
+                        <input class="form-input" value="${escapeHtml(orgProfile.name)}" readonly>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Organization ID</label>
-                        <input class="form-input mono" value="${session?.orgId || 'ORG_001'}" readonly>
+                        <label class="form-label">Tenant ID (Isolated Database Partition)</label>
+                        <input class="form-input mono" value="${escapeHtml(orgProfile.tenant_id)}" readonly>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Owner</label>
-                        <input class="form-input" value="${session?.name || '—'}" readonly>
+                        <label class="form-label">Current Authenticated User</label>
+                        <input class="form-input" value="${escapeHtml(session?.name || 'Administrator')}" readonly>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Role</label>
-                        <input class="form-input" value="${session?.role || '—'}" readonly>
+                        <label class="form-label">Assigned Role</label>
+                        <input class="form-input" value="${escapeHtml(session?.role || 'Organization Owner')}" readonly>
                     </div>
                 </div>
             </div>
-            <div class="card" style="margin-bottom:var(--space-4);">
+
+            <div class="card" style="margin-bottom:var(--space-6);">
                 <div class="card-header">
-                    <span class="card-title">Data Residency</span>
-                    <span class="badge badge-accent">Global-Ready</span>
+                    <span class="card-title">Data Residency & Sovereignty</span>
+                    <span class="badge badge-accent">Global-Ready Architecture</span>
                 </div>
                 <div class="grid grid-2 gap-4">
                     <div class="form-group">
-                        <label class="form-label">Region</label>
-                        <select class="form-select">
-                            <option>US East (us-east-1)</option>
-                            <option>EU West (eu-west-1)</option>
-                            <option>Asia Pacific (ap-south-1)</option>
-                        </select>
+                        <label class="form-label">Designated Ingestion Region</label>
+                        <input class="form-input" value="${escapeHtml(orgProfile.region || 'us-east-1')} (AWS US East)" readonly>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Timezone</label>
-                        <input class="form-input" value="UTC" readonly>
-                        <div class="text-xs text-muted" style="margin-top:var(--space-1);">All events use UTC timestamps internally</div>
+                        <label class="form-label">Event Timestamp Standardization</label>
+                        <input class="form-input" value="UTC (ISO 8601 strictly enforced across Tiers)" readonly>
                     </div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-header">
-                    <span class="card-title">User Management</span>
-                    <span class="badge badge-info">Milestone 6</span>
-                </div>
-                <div class="empty-state" style="padding:var(--space-6);">
-                    <p class="text-sm text-muted">User management will be available after backend integration.</p>
                 </div>
             </div>`;
     }
 };
 
-// Export all modules
+// Export to window
 window.InfraMonitoring = InfraMonitoring;
 window.NetworkMonitoring = NetworkMonitoring;
 window.SecurityMonitoring = SecurityMonitoring;
