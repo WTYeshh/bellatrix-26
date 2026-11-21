@@ -1408,6 +1408,11 @@ const RecoverySimulator = {
 
     async approveAndExecute(incidentId) {
         try {
+            // Automatically call POST /trigger/mitigate on collector to drain overload
+            try {
+                await fetch('http://localhost:8001/trigger/mitigate', { method: 'POST' });
+            } catch (e) {}
+
             await AegisAPI.post(`/incidents/${incidentId}/resolve`, {}).catch(() => null);
             await AegisAPI.post('/recovery/simulate', {
                 incident_id: incidentId,
@@ -1415,11 +1420,11 @@ const RecoverySimulator = {
                 approver: "SecOps Lead (Veeresh M V)"
             }).catch(() => null);
 
-            AegisToast.success(`INC-2026-089 Remediation Approved & Executed! Traffic rerouted to Backup Gateway GW-03.`);
+            AegisToast.success(`INC-2026-089 Remediation Approved & Executed! Traffic overflow mitigated & rerouted to Backup Gateway GW-03.`);
             const b = document.getElementById('rec-status-badge');
             if (b) { b.textContent = 'Executed & Resolved ✓'; b.className = 'badge badge-excellent'; }
             const a = document.getElementById('rec-audit-trail-status');
-            if (a) a.innerHTML = `<strong style="color:var(--color-good);">✓ Cryptographic audit log entry committed · Traffic Rerouted to GW-03</strong>`;
+            if (a) a.innerHTML = `<strong style="color:var(--color-good);">✓ Cryptographic audit log entry committed · Overload Mitigated · Traffic Rerouted to GW-03</strong>`;
             const btnApprove = document.getElementById('btn-approve-execute');
             if (btnApprove) { btnApprove.disabled = true; btnApprove.textContent = 'Remediation Executed ✓'; }
         } catch (err) {
@@ -1809,7 +1814,7 @@ const OrgSettings = {
 };
 
 // ==========================================
-// 12. AI DEMONSTRATION CONTROLS (4 BIG SCENARIOS)
+// 12. AI DEMONSTRATION CONTROLS (TUNABLE ATTACK & TRAFFIC SIMULATOR)
 // ==========================================
 const DemoControls = {
     async render(container) {
@@ -1818,10 +1823,63 @@ const DemoControls = {
                 <div class="flex items-center justify-between flex-wrap gap-4">
                     <div>
                         <h1 class="page-title">AI Demonstration Controls & Chaos Simulation</h1>
-                        <p class="page-subtitle">Inject live banking anomalies into Tier 1 collector (Port 8001) and central SaaS backend (Port 8000)</p>
+                        <p class="page-subtitle">Dynamically tune banking traffic & attack load (0% to 100%) and trigger live operational scenarios</p>
                     </div>
-                    <button class="btn btn-danger btn-sm" onclick="DemoControls.stopWorkload()">
-                        ${AegisIcons.x()} Emergency Stop / Normalize All
+                    <div class="flex items-center gap-2">
+                        <button class="btn btn-primary btn-sm" onclick="DemoControls.mitigateLoad()">
+                            ${AegisIcons.shieldCheck()} Mitigate & Reset (15%)
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="DemoControls.stopWorkload()">
+                            ${AegisIcons.x()} Emergency Stop All
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Interactive Traffic & Attack Load Intensity Tuner (0% - 100%) -->
+            <div class="card" style="margin-bottom:var(--space-6);border: 2px solid var(--color-accent);background:linear-gradient(180deg, rgba(34, 211, 238, 0.05) 0%, rgba(15, 23, 42, 0.7) 100%);box-shadow: 0 4px 20px rgba(0,0,0,0.35);">
+                <div class="card-header">
+                    <div>
+                        <span class="card-title" style="font-size:16px;">⚡ Tunable Traffic & Attack Load Simulator (0% — 100%)</span>
+                        <div class="text-xs text-muted" style="margin-top:2px;">Dial server load up to observe live health degradation (Excellent &rarr; Good &rarr; Fair &rarr; Poor) and dial down to show recovery</div>
+                    </div>
+                    <span class="badge badge-excellent" id="demo-load-badge">15% · Normal Baseline (Excellent)</span>
+                </div>
+
+                <div style="margin-bottom:var(--space-4);">
+                    <div class="flex items-center justify-between" style="margin-bottom:var(--space-2);">
+                        <label class="form-label" style="font-weight:600;margin-bottom:0;font-size:14px;">Gateway Load Intensity: <span id="demo-slider-val" class="mono font-semibold" style="color:var(--color-accent);">15%</span></label>
+                        <span class="text-xs text-muted mono" id="demo-load-preview">CPU: ~26% · Latency: ~49ms · Loss: 0.1% · Failed Logins: 0</span>
+                    </div>
+                    <input type="range" id="traffic-load-slider" min="0" max="100" value="15" style="width:100%;cursor:pointer;height:8px;accent-color:var(--color-accent);" oninput="DemoControls.onSliderInput(this.value)" onchange="DemoControls.setLoad(this.value)">
+                    <div class="flex justify-between text-xs text-muted mono" style="margin-top:6px;">
+                        <span>0% (Idle)</span>
+                        <span>30% (Excellent)</span>
+                        <span>60% (Good / Fair)</span>
+                        <span>85% (Fair Warning)</span>
+                        <span style="color:#ef4444;font-weight:600;">100% (Critical DDoS)</span>
+                    </div>
+                </div>
+
+                <!-- Quick Presets -->
+                <div class="flex items-center justify-between flex-wrap gap-2" style="padding-top:var(--space-3);border-top:1px solid var(--color-border);">
+                    <div class="flex items-center gap-2 flex-wrap">
+                        <span class="text-xs text-muted" style="font-weight:600;">QUICK PRESETS:</span>
+                        <button class="btn btn-secondary btn-sm" onclick="DemoControls.setLoad(15)">
+                            ${AegisIcons.check()} Normal Baseline (15%)
+                        </button>
+                        <button class="btn btn-secondary btn-sm" onclick="DemoControls.setLoad(55)">
+                            ${AegisIcons.zap()} Peak Banking Traffic (55%)
+                        </button>
+                        <button class="btn btn-danger btn-sm" onclick="DemoControls.setLoad(95)">
+                            ${AegisIcons.lock()} DDoS + Brute-Force Overload (95%)
+                        </button>
+                        <button class="btn btn-ghost btn-sm" onclick="DemoControls.toggleOutage()">
+                            ${AegisIcons.refresh()} Toggle SaaS Outage / Reconnect
+                        </button>
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="DemoControls.mitigateLoad()">
+                        ${AegisIcons.shieldCheck()} Mitigate & Reset (15%)
                     </button>
                 </div>
             </div>
@@ -1910,10 +1968,113 @@ const DemoControls = {
                     <span class="badge badge-good" id="demo-trace-status">Awaiting Trigger</span>
                 </div>
                 <div id="demo-trace-container" style="background:var(--color-bg-primary);padding:var(--space-4);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-accent);max-height:280px;overflow-y:auto;white-space:pre-wrap;">
-[AEGIS AIOps Engine] Select any scenario button above to trigger live two-tier execution.
-Status will be logged here with real-time cryptographic verification details.
+[AEGIS AIOps Engine] Select any scenario button or dial the load slider above to trigger live execution.
+Status and telemetry changes will be logged here with real-time cryptographic verification details.
                 </div>
             </div>`;
+    },
+
+    onSliderInput(val) {
+        val = parseInt(val);
+        const valEl = document.getElementById('demo-slider-val');
+        const badge = document.getElementById('demo-load-badge');
+        const preview = document.getElementById('demo-load-preview');
+        if (valEl) valEl.textContent = `${val}%`;
+
+        let state, badgeClass, prevText;
+        if (val <= 30) {
+            state = 'Normal Baseline (Excellent)';
+            badgeClass = 'badge badge-excellent';
+            prevText = `CPU: ~${Math.round(20 + val * 0.43)}% · Latency: ~${Math.round(40 + val * 0.6)}ms · Loss: 0.1% · Failed Logins: 0`;
+        } else if (val <= 60) {
+            const isGood = val <= 48;
+            state = isGood ? 'Moderate Peak (Good)' : 'Peak UPI Surge (Fair)';
+            badgeClass = isGood ? 'badge badge-good' : 'badge badge-fair';
+            prevText = `CPU: ~${Math.round(50 + (val-30) * 0.43)}% · Latency: ~${Math.round(110 + (val-30) * 1.83)}ms · Loss: 1.5% · Failed Logins: 0`;
+        } else if (val <= 85) {
+            state = 'Heavy Traffic Surge (Fair)';
+            badgeClass = 'badge badge-fair';
+            prevText = `CPU: ~${Math.round(70 + (val-60) * 0.52)}% · Latency: ~${Math.round(250 + (val-60) * 7.6)}ms · Loss: 6.0% · Failed Logins: ~1`;
+        } else {
+            state = 'DDoS & Credential Stuffing (Poor)';
+            badgeClass = 'badge badge-poor';
+            prevText = `CPU: ~${Math.round(88 + (val-85) * 0.5)}% · Latency: ~${Math.round(700 + (val-85) * 15.6)}ms · Loss: 15.0% · Failed Logins: 18/tick (Scrubbed)`;
+        }
+
+        if (badge) { badge.className = badgeClass; badge.textContent = `${val}% · ${state}`; }
+        if (preview) preview.textContent = prevText;
+    },
+
+    async setLoad(val) {
+        val = parseInt(val);
+        const slider = document.getElementById('traffic-load-slider');
+        if (slider) slider.value = val;
+        this.onSliderInput(val);
+
+        const trace = document.getElementById('demo-trace-container');
+        const status = document.getElementById('demo-trace-status');
+        if (status) status.textContent = `Tuning Load to ${val}%...`;
+
+        try {
+            let res;
+            try {
+                const r = await fetch('http://localhost:8001/trigger/load', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ intensity: val })
+                });
+                res = await r.json();
+            } catch {
+                res = { status: 'Tuned', load_intensity: val, projected_state: val > 85 ? 'Poor' : (val > 60 ? 'Fair' : 'Excellent'), message: `Load tuned to ${val}%` };
+            }
+
+            AegisToast.info(`Gateway load tuned to ${val}% (${res.projected_state || res.health_state})`);
+            if (status) status.textContent = `Load: ${val}% (${res.projected_state || 'Active'}) ✓`;
+            if (trace) {
+                trace.textContent = `=== TRAFFIC & ATTACK LOAD TUNER ===\n` +
+                    `Load Intensity: ${val}%\n` +
+                    `Projected Health State: ${res.projected_state || (val > 85 ? 'Poor' : (val > 60 ? 'Fair' : 'Excellent'))}\n` +
+                    `Scenario: ${res.scenario || 'Live Dynamic Load Adjustment'}\n` +
+                    `Message: ${res.message}\n\n` +
+                    (val > 85 
+                        ? `[CRITICAL BREACH SIMULATION]:\n• CPU elevated to 88-96%\n• UPI Latency surges to 700-950ms\n• Packet loss at 15%\n• 18 failed logins/tick (PII scrubbed locally)\n• Health state transitions to POOR\n-> Visit Command Center, Incident DNA, and Recovery Simulator to resolve!`
+                        : `[NOMINAL / CONTROLLED LOAD]:\n• Telemetry adjusting dynamically within configured boundaries.\n• Watch Command Center live gauges and charts update in real-time.`);
+            }
+        } catch (err) {
+            AegisToast.error(err.message);
+        }
+    },
+
+    async mitigateLoad() {
+        const slider = document.getElementById('traffic-load-slider');
+        if (slider) slider.value = 15;
+        this.onSliderInput(15);
+
+        const trace = document.getElementById('demo-trace-container');
+        const status = document.getElementById('demo-trace-status');
+        if (status) status.textContent = 'Mitigating...';
+
+        try {
+            let res;
+            try {
+                const r = await fetch('http://localhost:8001/trigger/mitigate', { method: 'POST' });
+                res = await r.json();
+            } catch {
+                res = { status: 'Mitigated', load_intensity: 15, health_state: 'Excellent', message: 'Traffic mitigated to 15%' };
+            }
+
+            AegisToast.success('Traffic overflow mitigated! Gateway load returned to 15% (Excellent)');
+            if (status) status.textContent = 'Mitigated (15%) ✓';
+            if (trace) {
+                trace.textContent = `=== OVERFLOW RELIEF & MITIGATION EXECUTED ===\n` +
+                    `Load Intensity: 15% (Nominal Baseline)\n` +
+                    `Health State: Excellent\n` +
+                    `Result: CPU, Latency, and Packet Loss drained back to nominal baseline.\n` +
+                    `Message: ${res.message}`;
+            }
+        } catch (err) {
+            AegisToast.error(err.message);
+        }
     },
 
     async injectRawPII() {

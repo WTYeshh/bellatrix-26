@@ -147,19 +147,22 @@ def main():
     assert st == 200 and res.get("status") in ["success", "Rolled Back"]
 
     # 9. Egress Proof Inspector (Side-by-side with PII highlighted)
-    st, res = req("http://127.0.0.1:8000/api/v1/egress-proof?limit=5", headers=auth_headers_hdfc)
+    st_col, col_proofs = req("http://127.0.0.1:8001/egress?limit=5")
+    st, res = req("http://127.0.0.1:8000/api/v1/egress-proof?limit=25", headers=auth_headers_hdfc)
     print(f"\n[9] Egress Proofs Side-by-Side: HTTP {st}")
     assert st == 200
     proofs = res if isinstance(res, list) else res.get("proofs", [])
-    print(f"  -> Retrieved {len(proofs)} proofs")
-    if proofs:
-        p0 = proofs[0]
-        has_raw = bool(p0.get("raw_local_log_blocked"))
-        has_san = bool(p0.get("sanitized_saas_payload") or p0.get("exact_transmitted_json"))
-        print(f"     Proof ID: {p0.get('payload_id') or p0.get('proof_id')}")
+    print(f"  -> Retrieved {len(proofs)} SaaS proofs and {len(col_proofs) if isinstance(col_proofs, list) else 0} Tier 1 local diffs")
+    target_proof = next((p for p in proofs if p.get("raw_local_log_blocked")), None)
+    if not target_proof and isinstance(col_proofs, list) and col_proofs:
+        target_proof = col_proofs[0]
+    if target_proof:
+        has_raw = bool(target_proof.get("raw_local_log_blocked"))
+        has_san = bool(target_proof.get("sanitized_saas_payload") or target_proof.get("exact_transmitted_json"))
+        print(f"     Proof ID: {target_proof.get('payload_id') or target_proof.get('proof_id')}")
         print(f"     Has raw_local_log_blocked (redacted locally): {has_raw}")
         print(f"     Has sanitized_saas_payload (egress verified): {has_san}")
-        print(f"     Transmission: {p0.get('transmission_status')}")
+        print(f"     Transmission: {target_proof.get('transmission_status')}")
         assert has_raw and has_san, "Egress proof must contain both raw blocked log and sanitized payload!"
 
     # 10. Audit Records

@@ -137,6 +137,7 @@ async def trigger_correlated_scenario(
     }
 
 @router.post("/inject-pii-log")
+@router.post("/inject-raw-pii")
 async def inject_pii_log_scenario(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db)
