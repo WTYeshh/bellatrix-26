@@ -244,3 +244,35 @@ async def get_system_services(current_user: User = Depends(get_current_user)):
         "services": services_info,
         "timestamp_utc": now_iso
     }
+
+import threading
+import simulate_load
+
+@router.post("/stress/cpu")
+async def trigger_cpu_stress(duration: int = Query(10, ge=1, le=60)):
+    """Triggers real physical CPU stress on this Windows laptop."""
+    t = threading.Thread(target=simulate_load.stress_cpu, args=(duration,), daemon=True)
+    t.start()
+    return {"status": "started", "target": "cpu", "duration": duration, "node": "server-01"}
+
+@router.post("/stress/memory")
+async def trigger_memory_stress(duration: int = Query(10, ge=1, le=60), size_mb: int = Query(500, ge=50, le=2000)):
+    """Triggers real physical RAM memory allocation on this Windows laptop."""
+    t = threading.Thread(target=simulate_load.stress_memory, args=(duration, size_mb), daemon=True)
+    t.start()
+    return {"status": "started", "target": "memory", "duration": duration, "size_mb": size_mb, "node": "server-01"}
+
+@router.post("/stress/disk")
+async def trigger_disk_stress(duration: int = Query(10, ge=1, le=60)):
+    """Triggers real disk I/O bursts on this Windows laptop."""
+    t = threading.Thread(target=simulate_load.stress_disk, args=(duration,), daemon=True)
+    t.start()
+    return {"status": "started", "target": "disk", "duration": duration, "node": "server-01"}
+
+@router.post("/stress/network")
+async def trigger_network_stress(duration: int = Query(10, ge=1, le=60)):
+    """Triggers real network socket probes on this Windows laptop."""
+    t = threading.Thread(target=simulate_load.stress_network, args=(duration,), daemon=True)
+    t.start()
+    return {"status": "started", "target": "network", "duration": duration, "node": "server-01"}
+

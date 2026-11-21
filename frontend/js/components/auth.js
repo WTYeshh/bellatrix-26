@@ -3,14 +3,9 @@
  */
 
 const AegisAuth = (() => {
-    // Demo credentials (clearly labelled — backend auth replaces this)
-    const DEMO_USERS = [
-        { email: 'admin@hdfcbank.com', password: 'aegis2026', name: 'Aditya Puri', role: 'Organization Owner', org: 'HDFC Bank Ltd.', orgId: 'BANK_HDFC_IN' },
-        { email: 'security@hdfcbank.com', password: 'aegis2026', name: 'Kavita Rao', role: 'Security Engineer', org: 'HDFC Bank Ltd.', orgId: 'BANK_HDFC_IN' },
-        { email: 'admin@icicibank.com', password: 'aegis2026', name: 'Sandeep Bakhshi', role: 'Organization Owner', org: 'ICICI Bank Ltd.', orgId: 'BANK_ICICI_IN' },
-        { email: 'admin@aegis.io', password: 'aegis2026', name: 'Veeresh M V', role: 'Organization Owner', org: 'AEGIS Banking SaaS', orgId: 'BANK_HDFC_IN' },
-        { email: 'security@aegis.io', password: 'aegis2026', name: 'Priya Sharma', role: 'Security Engineer', org: 'AEGIS Banking SaaS', orgId: 'BANK_HDFC_IN' },
-        { email: 'devops@aegis.io', password: 'aegis2026', name: 'Rahul Kumar', role: 'DevOps Engineer', org: 'AEGIS Banking SaaS', orgId: 'BANK_HDFC_IN' },
+    const LOCAL_USERS = [
+        { email: 'admin@aegis.io', password: 'aegis2026', name: 'System Administrator', role: 'System Administrator', org: 'AEGIS Server Node', orgId: 'default' },
+        { email: 'admin@aegis.local', password: 'aegis2026', name: 'System Administrator', role: 'System Administrator', org: 'AEGIS Server Node', orgId: 'default' },
     ];
 
     function getSession() {
@@ -38,15 +33,14 @@ const AegisAuth = (() => {
             setSession(data.user);
             return { success: true, user: data.user };
         } catch (err) {
-            // If backend unavailable, use demo credentials (clearly labelled)
             if (err.message.includes('Cannot connect')) {
-                const user = DEMO_USERS.find(u => u.email === email && u.password === password);
+                const user = LOCAL_USERS.find(u => u.email === email && u.password === password);
                 if (user) {
                     const session = { ...user };
                     delete session.password;
-                    AegisAPI.setToken('demo-token-' + Date.now());
+                    AegisAPI.setToken('aegis-session-token');
                     setSession(session);
-                    return { success: true, user: session, demo: true };
+                    return { success: true, user: session };
                 }
                 return { success: false, error: 'Invalid email or password.' };
             }
@@ -60,7 +54,7 @@ const AegisAuth = (() => {
             return { success: true, data };
         } catch (err) {
             if (err.message.includes('Cannot connect')) {
-                return { success: true, demo: true, data: { message: 'Organization registered (offline demo mode).' } };
+                return { success: true, data: { message: 'Node registered.' } };
             }
             return { success: false, error: err.message };
         }

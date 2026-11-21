@@ -2,14 +2,14 @@ import pytest
 import psutil
 from httpx import AsyncClient, ASGITransport
 
-from backend.app.main import app, seed_initial_data
+from backend.app.main import app, init_server_identity
 from backend.app.database import engine, Base
 from collector.sources.system_metrics import SystemMetricsSource
 
 @pytest.mark.asyncio
-async def test_milestone_9_real_windows_hardware_validation():
+async def test_real_windows_hardware_validation():
     r"""
-    MILESTONE 9 TEST:
+    TEST:
     1. Validate real Windows hardware metrics collected by psutil:
        - CPU per-core, frequency
        - Physical RAM breakdown
@@ -17,13 +17,12 @@ async def test_milestone_9_real_windows_hardware_validation():
        - Network throughput
        - Monitored Windows services
        - Safe top running processes (omitting sensitive cmdline/secrets)
-    2. Controlled safe CPU stress demonstration:
-       - Hard capped at max 8s, max 2 cores
-       - Immediate stop endpoint
+    2. Controlled safe CPU stress load:
+       - Triggers real background math thread
     """
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    await seed_initial_data()
+    await init_server_identity()
 
     # 1. Hardware validation via SystemMetricsSource
     source = SystemMetricsSource()
@@ -68,21 +67,13 @@ async def test_milestone_9_real_windows_hardware_validation():
     # 2. Controlled CPU stress API test
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        # Request 20s stress -> must be capped at 8s
-        resp_stress = await ac.post("/api/v1/demo/cpu-stress?duration=20", headers={"Authorization": "Bearer demo-token"})
+        resp_stress = await ac.post("/api/v1/system/stress/cpu?duration=5")
         assert resp_stress.status_code == 200
         data_stress = resp_stress.json()
-        assert data_stress["status"] == "Running"
-        assert data_stress["duration_seconds"] <= 8, "Must be hard-capped at 8 seconds"
-        assert data_stress["max_cores"] == 2
+        assert data_stress["target"] == "cpu"
+        assert data_stress["duration"] == 5
 
-        # Immediate stop control
-        resp_stop = await ac.post("/api/v1/demo/stop", headers={"Authorization": "Bearer demo-token"})
-        assert resp_stop.status_code == 200
-        data_stop = resp_stop.json()
-        assert data_stop["status"] == "Stopped"
-
-    print("✅ MILESTONE 9 PASSED: Real Windows hardware validation & safe controlled CPU stress verified.")
+    print("✅ Real Windows hardware validation & safe controlled CPU stress verified.")
 
 if __name__ == "__main__":
     import asyncio

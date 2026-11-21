@@ -11,12 +11,18 @@ class DiskMonitor:
     def __init__(self):
         self._last_time = time.time()
         self._last_io = None
+        self._partitions_cache = None
+        self._partitions_cache_time = 0.0
         try:
             self._last_io = psutil.disk_io_counters()
         except Exception:
             pass
 
     def collect_partitions(self) -> List[Dict[str, Any]]:
+        now = time.time()
+        if self._partitions_cache and (now - self._partitions_cache_time) < 10.0:
+            return self._partitions_cache
+
         partitions = []
         for p in psutil.disk_partitions(all=False):
             if 'cdrom' in p.opts or not p.fstype:
@@ -33,6 +39,8 @@ class DiskMonitor:
                 })
             except (PermissionError, OSError):
                 continue
+        self._partitions_cache = partitions
+        self._partitions_cache_time = now
         return partitions
 
     def collect_throughput(self) -> Dict[str, Any]:
@@ -42,6 +50,7 @@ class DiskMonitor:
         write_kbps = 0.0
         read_count = 0
         write_count = 0
+        total_iops = 0.0
 
         try:
             current_io = psutil.disk_io_counters()
@@ -52,6 +61,9 @@ class DiskMonitor:
                 write_kbps = round((write_bytes / dt) / 1024.0, 1)
                 read_count = current_io.read_count
                 write_count = current_io.write_count
+                r_diff = max(0, current_io.read_count - self._last_io.read_count)
+                w_diff = max(0, current_io.write_count - self._last_io.write_count)
+                total_iops = round((r_diff + w_diff) / dt, 1)
             self._last_io = current_io
         except Exception:
             pass
@@ -61,7 +73,8 @@ class DiskMonitor:
             "read_kbps": read_kbps,
             "write_kbps": write_kbps,
             "read_count": read_count,
-            "write_count": write_count
+            "write_count": write_count,
+            "total_iops": total_iops
         }
 
     def collect(self) -> Dict[str, Any]:
@@ -75,5 +88,6 @@ class DiskMonitor:
             "read_kbps": throughput["read_kbps"],
             "write_kbps": throughput["write_kbps"],
             "read_count": throughput["read_count"],
-            "write_count": throughput["write_count"]
+            "write_count": throughput["write_count"],
+            "total_iops": throughput["total_iops"]
         }

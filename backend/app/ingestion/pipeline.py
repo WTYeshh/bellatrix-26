@@ -11,6 +11,7 @@ from backend.app.models import (
 from backend.app.schemas import MetadataPayload, IngestionAck
 from backend.app.aiops.engine import aiops_engine
 from backend.app.api.broadcaster import broadcaster
+from backend.app.ingestion.rollup_engine import process_rollups_and_retention
 
 STRICT_ALLOWED_FIELDS = {
     "payload_id",
@@ -26,6 +27,16 @@ STRICT_ALLOWED_FIELDS = {
     "throughput_kbps",
     "bytes_sent",
     "bytes_recv",
+    "upload_kbps",
+    "download_kbps",
+    "disk_read_kbps",
+    "disk_write_kbps",
+    "disk_iops",
+    "cpu_freq_mhz",
+    "swap_percent",
+    "battery_percent",
+    "load_avg_1m",
+    "top_processes",
     "local_anomalies",
     "health_state",
     "event_category",
@@ -97,23 +108,34 @@ async def process_ingestion_payload(
     except:
         ts = now_utc
 
-    # 4. Save Metric Record
+    # 4. Save Metric Record with real hardware attributes
     metric_record = MetricRecord(
         payload_id=payload.payload_id,
         tenant_id=payload.tenant_id,
-        source_id=payload.source_id,
-        collector_id=payload.collector_id or "COLLECTOR_001",
+        source_id=payload.source_id or "server-01",
+        collector_id=payload.collector_id or "COLLECTOR_SERVER_01",
         timestamp_utc=ts,
         cpu_usage=payload.cpu_usage,
         memory_usage=payload.memory_usage,
         disk_usage=payload.disk_usage,
         latency_ms=payload.latency_ms or 0.0,
         packet_loss_pct=payload.packet_loss_pct or 0.0,
+        upload_kbps=payload.upload_kbps or 0.0,
+        download_kbps=payload.download_kbps or 0.0,
+        disk_read_kbps=payload.disk_read_kbps or 0.0,
+        disk_write_kbps=payload.disk_write_kbps or 0.0,
+        disk_iops=payload.disk_iops or 0.0,
+        cpu_freq_mhz=payload.cpu_freq_mhz or 0.0,
+        swap_percent=payload.swap_percent or 0.0,
+        battery_percent=payload.battery_percent,
+        load_avg_1m=payload.load_avg_1m or 0.0,
         health_state=payload.health_state,
         event_category=payload.event_category,
-        severity=payload.severity
+        severity=payload.severity,
+        top_processes_json=json.dumps(payload.top_processes or [])
     )
     db.add(metric_record)
+    await process_rollups_and_retention(db, metric_record)
 
     # 4b. Track Four Health States Transition (Excellent, Good, Fair, Poor)
     prev_stmt = select(MetricRecord).where(
@@ -167,7 +189,7 @@ async def process_ingestion_payload(
 
     # 6. Update Collector Heartbeat & Delivery Stats
     collector_stmt = select(Collector).where(
-        Collector.collector_id == (payload.collector_id or "COLLECTOR_001"),
+        Collector.collector_id == (payload.collector_id or "COLLECTOR_SERVER_01"),
         Collector.tenant_id == payload.tenant_id
     )
     c_res = await db.execute(collector_stmt)
@@ -231,8 +253,12 @@ async def process_ingestion_payload(
                 title=correlated["title"],
                 severity=correlated["severity"],
                 status=correlated["status"],
-                affected_service=correlated["affected_service"],
+                affected_service=correlated.get("affected_service", "server-01"),
                 affected_collectors=json.dumps(correlated["affected_collectors"]),
+                metric_breached=correlated.get("metric_breached"),
+                observed_value=correlated.get("observed_value"),
+                expected_value=correlated.get("expected_value"),
+                contributing_processes=correlated.get("contributing_processes"),
                 related_alerts=json.dumps(correlated["related_alerts"]),
                 timeline=json.dumps(correlated["timeline"]),
                 likely_cause=correlated["likely_cause"],

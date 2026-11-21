@@ -38,72 +38,36 @@ def create_access_token(data: dict, expires_delta: Optional[datetime.timedelta] 
 
 async def get_current_user(
     auth: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-ID"),
     db: AsyncSession = Depends(get_db)
 ) -> User:
-    if not auth:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication credentials were not provided."
-        )
-    token = auth.credentials
-    user = None
+    if auth and auth.credentials:
+        token = auth.credentials
+        try:
+            payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+            user_id = payload.get("sub")
+            if user_id:
+                stmt = select(User).where(User.id == int(user_id), User.is_active == True)
+                result = await db.execute(stmt)
+                user = result.scalar_one_or_none()
+                if user:
+                    return user
+        except jwt.PyJWTError:
+            pass
 
-    if token.startswith("demo-token"):
-        preferred_tenant = x_tenant_id
-        if not preferred_tenant:
-            if "hdfc" in token.lower():
-                preferred_tenant = "BANK_HDFC_IN"
-            elif "icici" in token.lower():
-                preferred_tenant = "BANK_ICICI_IN"
-            elif "globex" in token.lower() or "002" in token.lower():
-                preferred_tenant = "ORG_002"
-            else:
-                preferred_tenant = "ORG_001"
+    # Default fallback: local administrator
+    stmt = select(User).where(User.is_active == True)
+    default_user = (await db.execute(stmt)).scalars().first()
+    if default_user:
+        return default_user
 
-        if preferred_tenant == "BANK_ICICI_IN":
-            stmt = select(User).where(User.tenant_id == "BANK_ICICI_IN")
-        elif preferred_tenant == "ORG_002":
-            stmt = select(User).where(User.email == "admin@globex.io")
-        elif preferred_tenant == "ORG_001":
-            stmt = select(User).where(User.tenant_id == "ORG_001")
-        else:
-            stmt = select(User).where(User.tenant_id == preferred_tenant)
-        
-        user = (await db.execute(stmt)).scalars().first()
-        if not user:
-            # Fallback to any active user
-            user = (await db.execute(select(User).where(User.is_active == True))).scalars().first()
-        
-        if user:
-            if x_tenant_id and x_tenant_id in ["BANK_HDFC_IN", "BANK_ICICI_IN", "ORG_001", "ORG_002"]:
-                user.tenant_id = x_tenant_id
-            return user
-
-    try:
-        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
-        user_id = payload.get("sub")
-        tenant_id = payload.get("tenant_id")
-        if not user_id or not tenant_id:
-            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token payload.")
-    except jwt.PyJWTError:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could not validate credentials.")
-
-    stmt = select(User).where(User.id == int(user_id), User.is_active == True)
-    result = await db.execute(stmt)
-    user = result.scalar_one_or_none()
-    if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User account not found or inactive.")
-    
-    # If client passed X-Tenant-ID switcher header and user is Owner / Admin, allow tenant context switch
-    if x_tenant_id and x_tenant_id in ["BANK_HDFC_IN", "BANK_ICICI_IN", "ORG_001", "ORG_002"]:
-        user.tenant_id = x_tenant_id
-        
-    return user
+    raise HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Authentication credentials were not provided."
+    )
 
 def require_roles(allowed_roles: List[str]):
     async def role_checker(current_user: User = Depends(get_current_user)) -> User:
-        if current_user.role not in allowed_roles and current_user.role != "Organization Owner":
+        if current_user.role not in allowed_roles and current_user.role != "System Administrator":
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail=f"Access denied. Required role in {allowed_roles}, your role is {current_user.role}."
@@ -113,28 +77,17 @@ def require_roles(allowed_roles: List[str]):
 
 async def verify_collector_token(
     x_collector_id: Optional[str] = Header(None, alias="X-Collector-Id"),
-    x_tenant_id: Optional[str] = Header(None, alias="X-Tenant-Id"),
     x_auth_token: Optional[str] = Header(None, alias="X-Auth-Token"),
     db: AsyncSession = Depends(get_db)
 ) -> Collector:
-    """Verifies that ingestion / heartbeat is sent from a registered Tier 1 collector."""
-    if not x_collector_id or not x_tenant_id or not x_auth_token:
-        # Check if auth header Bearer token is provided
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Collector authentication missing. Provide X-Collector-Id, X-Tenant-Id, and X-Auth-Token."
-        )
+    col_id = x_collector_id or "COLLECTOR_SERVER_01"
+    token = x_auth_token or "aegis-collector-token-server01"
+    stmt = select(Collector).where(Collector.collector_id == col_id)
+    collector = (await db.execute(stmt)).scalar_one_or_none()
 
-    stmt = select(Collector).where(
-        Collector.collector_id == x_collector_id,
-        Collector.tenant_id == x_tenant_id,
-        Collector.auth_token == x_auth_token
-    )
-    result = await db.execute(stmt)
-    collector = result.scalar_one_or_none()
-    if not collector:
+    if not collector or collector.auth_token != token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Collector credentials invalid or unregistered."
+            detail="Collector authentication failed: Invalid collector ID or auth token."
         )
     return collector

@@ -85,9 +85,10 @@ class CentralAnomalyEngine:
                     method = "Sustained-Threshold"
                     reason = f"{metric_name.replace('_', ' ').title()} sustained at elevated level ({val}) for {self._sustained_counts[k_sustained]} cycles."
                 else:
-                    reason = f"{metric_name.replace('_', ' ').title()} ({val}) deviates from historical baseline ({median} ± {mad}) by {robust_z}σ."
+                    reason = f"{metric_name.replace('_', ' ').title()} ({val}) deviates from calibrated baseline ({median} ± {mad}) by {robust_z}σ."
 
                 now_utc = datetime.datetime.now(datetime.timezone.utc).isoformat()
+                top_procs = payload.get("top_processes", [])
                 anomalies.append({
                     "anomaly_id": f"ANOM-{uuid.uuid4().hex[:8].upper()}",
                     "source_id": source_id,
@@ -101,6 +102,7 @@ class CentralAnomalyEngine:
                     "detection_method": method,
                     "reason": reason,
                     "contributing_signals": [f"elevated_{metric_name}", f"deviation_{robust_z}sigma"],
+                    "contributing_processes": top_procs,
                     "timestamp_utc": now_utc
                 })
 

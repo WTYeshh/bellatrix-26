@@ -161,11 +161,8 @@ def test_scenario_09_local_buffering_and_reconnection():
     assert any(p["payload_id"] == p_id for p in pending)
     storage.remove_from_outbox(p_id)
 
-    try:
-        if os.path.exists(db_file):
-            os.remove(db_file)
-    except Exception:
-        pass
+    if os.path.exists(db_file):
+        os.remove(db_file)
     print("✅ SCENARIO 9: Local SQLite buffering and outbox replay verified.")
 
 # SCENARIO 10: Duplicate payload delivery

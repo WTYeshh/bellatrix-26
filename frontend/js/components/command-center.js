@@ -7,7 +7,7 @@
 const CommandCenter = (() => {
     let _chartInstances = {};
     let _refreshInterval = null;
-    let _historicalMetrics = [];
+    let _recentMetrics = [];
     let _selectedEnvironment = "";
     let _selectedCollector = "";
 
@@ -25,18 +25,6 @@ const CommandCenter = (() => {
     }
 
     function bindFilterEvents() {
-        const tenantSelect = document.getElementById('cc-tenant-switcher');
-        if (tenantSelect) {
-            tenantSelect.value = AegisAPI.getTenant();
-            tenantSelect.addEventListener('change', (e) => {
-                const newT = e.target.value;
-                AegisAPI.setTenant(newT);
-                const globalSel = document.getElementById('global-tenant-select');
-                if (globalSel) globalSel.value = newT;
-                AegisToast.success(`Switched active bank to ${newT}`);
-                loadData();
-            });
-        }
         const envSelect = document.getElementById('cc-env-filter');
         if (envSelect) {
             envSelect.addEventListener('change', (e) => {
@@ -60,37 +48,16 @@ const CommandCenter = (() => {
                 <div class="flex items-center justify-between flex-wrap gap-4">
                     <div>
                         <div class="flex items-center gap-2 mb-1">
-                            <span class="badge badge-accent" id="cc-tenant-badge">TENANT: ORG_001 (Acme Corp)</span>
-                            <span class="badge badge-teal" id="cc-host-badge">Configured Host</span>
+                            <span class="badge badge-accent" id="cc-tenant-badge">NODE: server-01 (Laptop)</span>
+                            <span class="badge badge-teal" id="cc-host-badge">LIVE WINDOWS HOST (psutil)</span>
                             <span class="badge badge-good" id="cc-stage-badge">STAGE 1: INGEST</span>
                         </div>
-                        <h1 class="page-title">SaaS Command Center</h1>
-                        <p class="page-subtitle">Consolidated multi-environment observability & autonomous operations platform</p>
+                        <h1 class="page-title">Command Center</h1>
+                        <p class="page-subtitle">Real physical hardware observability & autonomous operations platform</p>
                     </div>
                     <div class="flex items-center gap-3 flex-wrap">
-                        <!-- Tenant Switcher Dropdown (BANK_HDFC_IN vs BANK_ICICI_IN) -->
                         <div class="flex items-center gap-2">
-                            <label class="text-xs text-muted font-medium" for="cc-tenant-switcher">Bank:</label>
-                            <select id="cc-tenant-switcher" class="form-input" style="padding:4px 8px;font-size:12px;font-weight:600;width:auto;color:var(--color-primary);border:1px solid var(--color-border);border-radius:var(--radius-md);">
-                                <option value="BANK_HDFC_IN">BANK_HDFC_IN (HDFC Bank)</option>
-                                <option value="BANK_ICICI_IN">BANK_ICICI_IN (ICICI Bank)</option>
-                            </select>
-                        </div>
-                        <!-- Selectors for Multi-Environment Fleet Filtering -->
-                        <div class="flex items-center gap-2">
-                            <label class="text-xs text-muted font-medium" for="cc-env-filter">Env:</label>
-                            <select id="cc-env-filter" class="form-input" style="padding:4px 8px;font-size:12px;width:auto;">
-                                <option value="">All Environments</option>
-                                <option value="production" selected>Production (Core Switch)</option>
-                                <option value="staging">Disaster Recovery (DR)</option>
-                            </select>
-                        </div>
-                        <div class="flex items-center gap-2">
-                            <label class="text-xs text-muted font-medium" for="cc-col-filter">Collector:</label>
-                            <select id="cc-col-filter" class="form-input" style="padding:4px 8px;font-size:12px;width:auto;">
-                                <option value="">All Collectors</option>
-                                <option value="COLLECTOR_001" selected>COLLECTOR_001 (Local Host)</option>
-                            </select>
+                            <span class="badge badge-teal" style="font-size:12px;padding:4px 8px;">Collector: COLLECTOR_SERVER_01</span>
                         </div>
                         <span class="text-xs text-muted" id="cc-last-updated">Last updated: —</span>
                         <button class="btn btn-secondary btn-sm" onclick="CommandCenter.refresh()">
@@ -208,7 +175,7 @@ const CommandCenter = (() => {
                 <div class="chart-card">
                     <div class="card-header">
                         <span class="card-title">Real CPU & Memory Trend (Live Database Ingestion)</span>
-                        <span class="text-xs text-muted" id="cc-chart-res-info">Historical psutil measurements</span>
+                        <span class="text-xs text-muted" id="cc-chart-res-info">Stored psutil measurements</span>
                     </div>
                     <div class="chart-wrapper">
                         <canvas id="cc-chart-resources"></canvas>
@@ -265,18 +232,28 @@ const CommandCenter = (() => {
             const qs = q.length ? `?${q.join('&')}` : '';
 
             // Fetch live summary and live time-series in parallel
-            const [sumRes, metRes] = await Promise.all([
+            const [sumRes, metRes] = await Promise.allSettled([
                 AegisAPI.get(`/dashboard/summary${qs}`),
                 AegisAPI.get(`/metrics?limit=30`)
             ]);
 
-            summaryData = sumRes;
-            metricsData = Array.isArray(metRes) ? metRes : [];
-            _historicalMetrics = metricsData.slice().reverse(); // Chronological order
+            if (sumRes.status === 'rejected') {
+                throw new Error(sumRes.reason.message);
+            }
+
+            summaryData = sumRes.value;
+            if (metRes.status === 'fulfilled' && Array.isArray(metRes.value)) {
+                metricsData = metRes.value;
+            } else if (summaryData && Array.isArray(summaryData.metrics_history)) {
+                metricsData = summaryData.metrics_history;
+            } else {
+                metricsData = [];
+            }
+            _recentMetrics = metricsData.slice().reverse(); // Chronological order
 
             showSimBanner(summaryData.simulated === true);
             updateUI(summaryData);
-            updateChartsWithRealData(_historicalMetrics);
+            updateChartsWithRealData(_recentMetrics);
         } catch (err) {
             // Backend offline or error — display honest offline state with last update time
             showSimBanner(true, err.message);
@@ -316,18 +293,6 @@ const CommandCenter = (() => {
     }
 
     function updateUI(data) {
-        // Sync active bank tenant badge and select
-        const curTenant = AegisAPI.getTenant();
-        const bankName = curTenant === 'BANK_ICICI_IN' ? 'ICICI Bank Ltd.' : 'HDFC Bank Ltd.';
-        const tBadge = document.getElementById('cc-tenant-badge');
-        if (tBadge) {
-            tBadge.textContent = `TENANT: ${curTenant} (${bankName})`;
-        }
-        const tSwitcher = document.getElementById('cc-tenant-switcher');
-        if (tSwitcher) {
-            tSwitcher.value = curTenant;
-        }
-
         // Health banner
         const scoreEl = document.getElementById('cc-health-score');
         const labelEl = document.getElementById('cc-health-label');
@@ -344,7 +309,11 @@ const CommandCenter = (() => {
         setText('cc-state-fair', data.states?.fair ?? 0);
         setText('cc-state-poor', data.states?.poor ?? 0);
 
-        // Dynamic host and maturity status badges
+        // Server Node badge
+        const tBadge = document.getElementById('cc-tenant-badge');
+        if (tBadge) {
+            tBadge.textContent = 'NODE: server-01 (Laptop)';
+        }
         const hBadge = document.getElementById('cc-host-badge');
         if (hBadge && data.host_status) {
             hBadge.textContent = data.host_status;

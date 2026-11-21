@@ -5,7 +5,7 @@ from typing import Dict, Any, List
 class CPUMonitor:
     """
     Tier 1 CPU Utilization and Hardware Monitoring.
-    Measures overall CPU%, per-core CPU%, clock frequency, core counts, and historical buffers.
+    Measures overall CPU%, per-core CPU%, clock frequency, core counts, and rolling buffers.
     """
     def __init__(self, history_size: int = 60):
         self.history_size = history_size

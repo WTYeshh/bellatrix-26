@@ -1,5 +1,8 @@
 import os
+from dotenv import load_dotenv
 from pydantic_settings import BaseSettings
+
+load_dotenv()
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "AEGIS Privacy-First AIOps Observability Platform"
@@ -26,5 +29,9 @@ class Settings(BaseSettings):
     BASELINE_WINDOW_SIZE: int = 30
     ANOMALY_ZSCORE_THRESHOLD: float = 2.5
     ANOMALY_MAD_THRESHOLD: float = 3.0
+
+    # AI & LLM Engine (Google Gemini)
+    GEMINI_API_KEY: str = os.getenv("GEMINI_API_KEY", "")
+    GEMINI_MODEL: str = os.getenv("GEMINI_MODEL", "gemini-3.8-flash")
 
 settings = Settings()

@@ -81,7 +81,7 @@ class LocalAnomalyDetector:
             detection_method = "Sustained-Threshold"
             reason = f"{metric.replace('_', ' ').title()} sustained at elevated level ({observed_value}) for {self._sustained_counts[metric]} consecutive cycles."
         else:
-            reason = f"{metric.replace('_', ' ').title()} ({observed_value}) exceeds historical baseline ({median} ± {mad}) by {robust_z}σ."
+            reason = f"{metric.replace('_', ' ').title()} ({observed_value}) exceeds recorded baseline ({median} ± {mad}) by {robust_z}σ."
 
         now_utc = datetime.datetime.now(datetime.timezone.utc).isoformat()
         return {

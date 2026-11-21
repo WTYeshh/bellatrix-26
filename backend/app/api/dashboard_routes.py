@@ -43,15 +43,24 @@ async def get_dashboard_summary(
     offline_count = 0
     for c in collectors:
         if c.last_heartbeat:
-            delta = (now_utc - c.last_heartbeat.replace(tzinfo=datetime.timezone.utc if not c.last_heartbeat.tzinfo else None)).total_seconds()
-            if delta <= 60.0 and c.status == "Online":
-                online_count += 1
+            hb = c.last_heartbeat
+            if isinstance(hb, str):
+                try:
+                    hb = datetime.datetime.fromisoformat(hb)
+                except Exception:
+                    hb = None
+            if hb:
+                if hb.tzinfo is None:
+                    hb = hb.replace(tzinfo=datetime.timezone.utc)
+                delta = abs((now_utc - hb).total_seconds())
+                if delta <= settings.COLLECTOR_OFFLINE_THRESHOLD_SECONDS and c.status == "Online":
+                    online_count += 1
+                else:
+                    offline_count += 1
             else:
                 offline_count += 1
-                c.status = "Offline"
         else:
             offline_count += 1
-            c.status = "Offline"
 
     # 2. Latest metrics per source
     met_stmt = (
@@ -80,10 +89,6 @@ async def get_dashboard_summary(
         # If no collectors yet, default clean good state
         states = {"excellent": 1, "good": 0, "fair": 0, "poor": 0}
 
-    # Downgrade to Poor if any collector is offline (> 60s missed heartbeat)
-    if offline_count > 0:
-        states["poor"] += offline_count
-
     # Overall health score calculation (0 - 100)
     total_sources = sum(states.values())
     health_score = 100
@@ -91,10 +96,7 @@ async def get_dashboard_summary(
         penalty = (states["fair"] * 15) + (states["poor"] * 35)
         health_score = max(20, 100 - int(penalty / total_sources))
 
-    if offline_count > 0:
-        overall_health = "Poor"
-        health_score = min(health_score, 45)
-    elif health_score >= 88:
+    if health_score >= 88:
         overall_health = "Excellent"
     elif health_score >= 70:
         overall_health = "Good"
@@ -103,14 +105,14 @@ async def get_dashboard_summary(
     else:
         overall_health = "Poor"
 
-    # Averages
+    # Averages from real stored history
     if metric_records:
         cpu_avg = round(sum(m.cpu_usage for m in metric_records) / len(metric_records), 1)
         mem_avg = round(sum(m.memory_usage for m in metric_records) / len(metric_records), 1)
         disk_avg = round(sum(m.disk_usage for m in metric_records) / len(metric_records), 1)
         lat_avg = round(sum(m.latency_ms for m in metric_records) / len(metric_records), 1)
     else:
-        cpu_avg, mem_avg, disk_avg, lat_avg = 38.5, 52.0, 48.0, 22.0
+        cpu_avg, mem_avg, disk_avg, lat_avg = 0.0, 0.0, 0.0, 0.0
 
     # 3. Active Incidents
     inc_stmt = (
@@ -156,11 +158,16 @@ async def get_dashboard_summary(
         compliance_pct = int((verified_count / egress_count) * 100) if egress_count > 0 else 0
         privacy_status = f"{compliance_pct}% Compliant" if compliance_pct == 100 else f"{compliance_pct}% Verified"
 
-    # Dynamic host status & AIOps maturity stage
-    if online_count > 0:
-        host_status = "LIVE WINDOWS HOST (psutil)"
+    # Dynamic host status & maturity stage
+    if len(metric_records) < 5:
+        host_status = "Collecting baseline telemetry..."
+        maturity_stage = "Stage 0: Baseline Calibration"
+    elif online_count > 0:
+        host_status = "Live Server: server-01 (Laptop)"
+        maturity_stage = "Stage 1: Active Ingest"
     else:
-        host_status = "Configured Host (Awaiting Telemetry)"
+        host_status = "server-01 (Awaiting Telemetry)"
+        maturity_stage = "Stage 0: Unconfigured"
 
     # 6. Recommendations
     rec_list = []
@@ -173,7 +180,7 @@ async def get_dashboard_summary(
     else:
         rec_list.append({
             "text": "All operational baselines nominal across connected collectors.",
-            "reason": "Telemetry signals are within historical ±2.5σ tolerance limits."
+            "reason": "Telemetry signals are within recorded ±2.5σ tolerance limits."
         })
 
     if active_incidents and len(active_incidents) > 0 and len(rec_list) > 0:
@@ -185,11 +192,23 @@ async def get_dashboard_summary(
     else:
         maturity_stage = "Stage 0: Unconfigured"
 
-    # 7. Organization lookup for tenant name
-    from backend.app.models import Organization
-    org_res = await db.execute(select(Organization).where(Organization.tenant_id == current_user.tenant_id))
-    org_obj = org_res.scalar_one_or_none()
-    tenant_name = org_obj.name if org_obj else current_user.tenant_id
+    # 7. Recent metrics history for timeseries charts
+    history_records = metric_records[:30]
+    metrics_history = [
+        {
+            "payload_id": m.payload_id,
+            "source_id": m.source_id,
+            "collector_id": m.collector_id,
+            "timestamp": m.timestamp_utc.isoformat() if m.timestamp_utc else None,
+            "cpu_usage": m.cpu_usage,
+            "memory_usage": m.memory_usage,
+            "disk_usage": m.disk_usage,
+            "latency_ms": m.latency_ms,
+            "packet_loss_pct": m.packet_loss_pct,
+            "health_state": m.health_state
+        }
+        for m in history_records
+    ]
 
     return DashboardSummary(
         health_state=overall_health,
@@ -197,9 +216,6 @@ async def get_dashboard_summary(
         states=states,
         collectors_online=online_count,
         collectors_offline=offline_count,
-        collectors_total=len(collectors),
-        tenant_id=current_user.tenant_id,
-        tenant_name=tenant_name,
         active_incidents=len(active_incidents),
         incidents_24h=len(incidents),
         security_alerts=len(sec_alerts),
@@ -214,5 +230,39 @@ async def get_dashboard_summary(
         recommendations=rec_list,
         simulated=False,
         maturity_stage=maturity_stage,
-        host_status=host_status
+        host_status=host_status,
+        metrics_history=metrics_history
     )
+
+
+@router.get("/metrics")
+@router.get("/dashboard/metrics")
+async def get_dashboard_metrics(
+    limit: int = Query(50, ge=1, le=500),
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """Direct dashboard metrics route avoiding ad-blocker filters on /metrics."""
+    stmt = (
+        select(MetricRecord)
+        .where(MetricRecord.tenant_id == current_user.tenant_id)
+        .order_by(desc(MetricRecord.timestamp_utc))
+        .limit(limit)
+    )
+    records = (await db.execute(stmt)).scalars().all()
+    return [
+        {
+            "payload_id": r.payload_id,
+            "source_id": r.source_id,
+            "collector_id": r.collector_id,
+            "timestamp": r.timestamp_utc.isoformat() if r.timestamp_utc else None,
+            "cpu_usage": r.cpu_usage,
+            "memory_usage": r.memory_usage,
+            "disk_usage": r.disk_usage,
+            "latency_ms": r.latency_ms,
+            "packet_loss_pct": r.packet_loss_pct,
+            "health_state": r.health_state
+        }
+        for r in records
+    ]
+

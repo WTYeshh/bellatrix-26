@@ -8,7 +8,7 @@ def test_statistical_baselines_and_zscore():
     source = "SERVER_01"
     metric = "cpu_usage"
 
-    # Feed normal historical CPU values: ~40% ± 4%
+    # Feed normal CPU values: ~40% ± 4%
     normal_history = [38.0, 42.0, 39.5, 41.0, 40.0, 38.5, 43.0, 39.0, 41.5, 40.5]
     for val in normal_history:
         engine.record_observation(tenant, source, metric, val)
@@ -27,7 +27,7 @@ def test_statistical_baselines_and_zscore():
     assert anomaly["severity"] in ["High", "Critical"]
     assert anomaly["deviation_sigma"] >= 3.0
     assert anomaly["observed_value"] == 96.0
-    assert "historical baseline" in anomaly["reason"] or "acceleration" in anomaly["reason"]
+    assert "calibrated baseline" in anomaly["reason"] or "acceleration" in anomaly["reason"]
     print("✅ Statistical baselines & robust Z-Score anomaly detection verified.")
 
 def test_isolation_forest_ml_scoring():
@@ -196,3 +196,6 @@ if __name__ == "__main__":
     test_incident_dna_correlation()
     test_explainable_recommendation()
     print("All AIOps & Incident tests passed!")
+
+
+

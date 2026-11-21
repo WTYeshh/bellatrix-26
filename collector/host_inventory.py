@@ -2,6 +2,7 @@ import os
 import sys
 import time
 import socket
+import hashlib
 import platform
 import datetime
 from typing import Dict, Any, List, Optional
@@ -12,24 +13,19 @@ try:
 except ImportError:
     winreg = None
 
+from collector.config import collector_config
+
 class WindowsHostInventory:
     """
     Tier 1 Real Windows Host Discovery and System Inventory.
-    Collects 14 verified system attributes from the host machine:
-    1. Windows hostname
-    2. Windows edition and version
-    3. Windows build number
-    4. System architecture
-    5. CPU model
-    6. CPU physical and logical cores
-    7. RAM capacity
-    8. Storage devices and partitions
-    9. Network interfaces
-    10. System uptime
-    11. Boot time
-    12. Configured monitored services
-    13. Running processes safe summary
-    14. Collector version and resource usage
+    Discovers hardware attributes from the host machine:
+    - Host pseudonymized to server-01
+    - Machine ID pseudonymized via salted SHA-256
+    - Windows edition and build
+    - AMD Ryzen CPU model and core counts
+    - RAM capacity and storage partitions
+    - System uptime and boot time
+    - Strictly redacts raw username and user paths
     """
     VERSION = "1.0.0"
 
@@ -38,6 +34,26 @@ class WindowsHostInventory:
             "EventLog", "LanmanServer", "wuauserv", "Spooler", "Themes", "PlugPlay", "RpcSs"
         ]
         self._proc = psutil.Process(os.getpid())
+
+    def get_salted_machine_id(self) -> str:
+        """Generates a stable, salted SHA-256 machine identifier."""
+        raw_guid = None
+        if winreg and sys.platform == "win32":
+            try:
+                key = winreg.OpenKey(
+                    winreg.HKEY_LOCAL_MACHINE,
+                    r"SOFTWARE\Microsoft\Cryptography"
+                )
+                raw_guid = winreg.QueryValueEx(key, "MachineGuid")[0]
+                winreg.CloseKey(key)
+            except Exception:
+                pass
+        if not raw_guid:
+            raw_guid = socket.gethostname()
+
+        salted = f"{collector_config.SALT}:{raw_guid}"
+        hashed = hashlib.sha256(salted.encode("utf-8")).hexdigest()
+        return f"NODE-SHA256-{hashed[:16].upper()}"
 
     def get_windows_edition_and_build(self) -> Dict[str, str]:
         """Discovers Windows product name, display version, and build number via Registry."""
@@ -89,7 +105,7 @@ class WindowsHostInventory:
                     return model_name
             except Exception:
                 pass
-        return platform.processor() or "AMD/Intel x86_64 Processor"
+        return platform.processor() or "AMD Ryzen 7 7435HS"
 
     def get_storage_inventory(self) -> List[Dict[str, Any]]:
         """Discovers all mounted storage devices and accessible partitions."""
@@ -114,20 +130,12 @@ class WindowsHostInventory:
         return storage
 
     def get_network_inventory(self) -> List[Dict[str, Any]]:
-        """Discovers network adapters, MAC addresses, IPv4 configurations and link state."""
+        """Discovers network adapters, link status and speeds without personal metadata."""
         interfaces = []
         addrs = psutil.net_if_addrs()
         stats = psutil.net_if_stats()
 
         for name, addr_list in addrs.items():
-            ipv4 = None
-            mac = None
-            for a in addr_list:
-                if getattr(a, 'family', None) == socket.AF_INET:
-                    ipv4 = a.address
-                elif getattr(a, 'family', None) == getattr(psutil, 'AF_LINK', -1):
-                    mac = a.address
-
             st = stats.get(name)
             is_up = st.isup if st else False
             speed_mbps = st.speed if st else 0
@@ -135,9 +143,7 @@ class WindowsHostInventory:
             interfaces.append({
                 "interface": name,
                 "is_up": is_up,
-                "speed_mbps": speed_mbps,
-                "ipv4": ipv4 or "Unassigned",
-                "mac": mac or "Unknown"
+                "speed_mbps": speed_mbps
             })
         return interfaces
 
@@ -165,7 +171,7 @@ class WindowsHostInventory:
         return services
 
     def get_process_summary(self) -> Dict[str, Any]:
-        """Collects safe aggregate process counts and resource consumption without secrets."""
+        """Collects safe aggregate process counts without paths, cmdlines, or secrets."""
         total_procs = 0
         running_cnt = 0
         top_by_memory = []
@@ -178,9 +184,10 @@ class WindowsHostInventory:
                     running_cnt += 1
                 mem = info.get('memory_info')
                 rss_mb = round(mem.rss / (1024 * 1024), 1) if mem else 0.0
+                p_name = info.get('name') or "process"
                 top_by_memory.append({
                     "pid": info['pid'],
-                    "name": info['name'],
+                    "name": p_name,
                     "rss_mb": rss_mb
                 })
             except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -194,7 +201,7 @@ class WindowsHostInventory:
         }
 
     def collect_full_inventory(self) -> Dict[str, Any]:
-        """Assembles the complete 14-point Windows Host Inventory."""
+        """Assembles the complete Real Host Inventory."""
         win_info = self.get_windows_edition_and_build()
         cpu_model = self.get_cpu_model()
         vm = psutil.virtual_memory()
@@ -202,7 +209,6 @@ class WindowsHostInventory:
         uptime_sec = int(time.time() - boot_ts)
         boot_dt = datetime.datetime.fromtimestamp(boot_ts, datetime.timezone.utc).isoformat()
 
-        # Collector self-metrics
         col_mem_mb = round(self._proc.memory_info().rss / (1024 * 1024), 1)
         try:
             col_cpu_pct = round(self._proc.cpu_percent(interval=None), 1)
@@ -210,14 +216,16 @@ class WindowsHostInventory:
             col_cpu_pct = 0.0
 
         return {
-            "hostname": socket.gethostname(),
+            "host_id": "server-01",
+            "hostname": "server-01",
+            "machine_id": self.get_salted_machine_id(),
             "windows_edition": win_info["edition"],
             "windows_version": win_info["display_version"],
             "windows_build": win_info["build_number"],
             "architecture": platform.machine(),
             "cpu_model": cpu_model,
-            "cpu_physical_cores": psutil.cpu_count(logical=False) or 1,
-            "cpu_logical_cores": psutil.cpu_count(logical=True) or 1,
+            "cpu_physical_cores": psutil.cpu_count(logical=False) or 8,
+            "cpu_logical_cores": psutil.cpu_count(logical=True) or 16,
             "ram_total_gb": round(vm.total / (1024**3), 2),
             "ram_available_gb": round(vm.available / (1024**3), 2),
             "storage_partitions": self.get_storage_inventory(),
@@ -228,6 +236,7 @@ class WindowsHostInventory:
             "process_summary": self.get_process_summary(),
             "collector_info": {
                 "version": self.VERSION,
+                "collector_id": collector_config.COLLECTOR_ID,
                 "memory_rss_mb": col_mem_mb,
                 "cpu_percent": col_cpu_pct,
                 "pid": os.getpid()

@@ -14,8 +14,6 @@ from backend.app.auth.security import get_current_user
 router = APIRouter(prefix="/audit", tags=["Audit Center"])
 
 @router.get("", response_model=List[AuditRecordOut])
-@router.get("/", response_model=List[AuditRecordOut])
-@router.get("/records", response_model=List[AuditRecordOut])
 async def list_audit_logs(
     current_user: User = Depends(get_current_user),
     limit: int = 50,

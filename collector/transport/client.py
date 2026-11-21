@@ -1,4 +1,8 @@
 import time
+import uuid
+import hmac
+import hashlib
+import json
 from typing import Dict, Any, Optional, Tuple
 import requests
 
@@ -22,10 +26,23 @@ class SaaSClient:
         }
 
     def send_metadata(self, payload: Dict[str, Any]) -> Tuple[bool, Optional[Dict[str, Any]]]:
-        """Transmits metadata payload to Tier 2 SaaS."""
+        """Transmits metadata payload to Tier 2 SaaS with HMAC-SHA256 signature, nonce, and timestamp."""
         url = f"{self.base_url}/ingestion/metadata"
         try:
-            resp = requests.post(url, json=payload, headers=self.headers, timeout=4.0)
+            req_headers = dict(self.headers)
+            body_bytes = json.dumps(payload, sort_keys=True).encode("utf-8")
+            
+            # Security: HMAC-SHA256 signature over body with timestamp and nonce
+            nonce = uuid.uuid4().hex
+            timestamp = str(int(time.time()))
+            sig_material = f"{timestamp}:{nonce}:".encode("utf-8") + body_bytes
+            sig = hmac.new(self.auth_token.encode("utf-8"), sig_material, hashlib.sha256).hexdigest()
+
+            req_headers["X-Timestamp"] = timestamp
+            req_headers["X-Nonce"] = nonce
+            req_headers["X-Signature"] = sig
+
+            resp = requests.post(url, data=body_bytes, headers=req_headers, timeout=4.0)
             if resp.status_code in [200, 201]:
                 return True, resp.json()
             else:

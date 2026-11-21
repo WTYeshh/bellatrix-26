@@ -280,7 +280,7 @@ def test_recommendation_evidence_verification():
     explanation_engine = ExplanationEngine()
     rec_engine = RecommendationEngine(explanation_engine)
     
-    mock_incident = {
+    sample_incident = {
         "id": "INC-VERIFY-123",
         "title": "Severe Host Saturation & Latency Surge",
         "severity": "Critical",
@@ -304,7 +304,7 @@ def test_recommendation_evidence_verification():
         ]
     }
     
-    rec = rec_engine.generate(mock_incident)
+    rec = rec_engine.generate(sample_incident)
     assert rec["incident_id"] == "INC-VERIFY-123"
     assert rec["title"] is not None
     assert len(rec["actionable_steps"]) > 0
@@ -352,11 +352,8 @@ def test_tenant_isolation_enforcement():
 def test_saas_outage_buffering():
     """Collector stores payloads in SQLite outbox during simulated SaaS outage."""
     test_db = "test_saas_outage_buffer.db"
-    try:
-        if os.path.exists(test_db):
-            os.remove(test_db)
-    except Exception:
-        pass
+    if os.path.exists(test_db):
+        os.remove(test_db)
         
     storage = LocalCollectorStorage(db_path=test_db)
     
@@ -373,11 +370,8 @@ def test_saas_outage_buffering():
         storage.remove_from_outbox(it["payload_id"])
         
     assert storage.count_pending() == 0
-    try:
-        if os.path.exists(test_db):
-            os.remove(test_db)
-    except Exception:
-        pass
+    if os.path.exists(test_db):
+        os.remove(test_db)
 
 
 # -------------------------------------------------------------
@@ -387,7 +381,7 @@ def test_local_detection_during_outage():
     """Collector detects anomalies locally without any SaaS connectivity."""
     coordinator = LocalAIOpsCoordinator()
     
-    # Feed historical data locally
+    # Feed sample baseline data locally
     for _ in range(12):
         coordinator.process_telemetry("NODE_OFFLINE", {
             "cpu_usage": 25.0, "memory_usage": 40.0, "disk_usage": 30.0, "latency_ms": 15.0

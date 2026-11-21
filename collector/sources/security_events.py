@@ -92,7 +92,7 @@ class SecurityEventsSource:
             desc = f"Suspicious login activity: {total_failed_count} failed attempt in {self.window_seconds//60}-min window"
         else:
             severity = "Low"
-            desc = "Authentication activity nominal within historical baseline"
+            desc = "Authentication activity nominal within recorded baseline"
 
         adapter = "Windows-EventLog" if win_count > 0 else "Local-Auth-Engine"
         now_iso = datetime.datetime.now(datetime.timezone.utc).isoformat()

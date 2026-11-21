@@ -14,6 +14,8 @@ class SecurityMonitor:
         self.failure_window = failure_window_seconds
         self.spike_threshold = spike_threshold
         self._failed_attempts: List[Dict[str, Any]] = []
+        self._wevt_cached_count = 0
+        self._wevt_cached_time = 0.0
 
     def record_attempt(self, username: str, success: bool, client_ip: str, raw_credentials: str = "") -> Dict[str, Any]:
         now = time.time()
@@ -32,14 +34,18 @@ class SecurityMonitor:
     def query_windows_event_log_failed_logins(self) -> int:
         if sys.platform != "win32":
             return 0
+        now = time.time()
+        if (now - self._wevt_cached_time) < 10.0:
+            return self._wevt_cached_count
         try:
             cmd = ['wevtutil', 'qe', 'Security', '/q:*[System[(EventID=4625) and TimeCreated[timediff(@SystemTime) <= 300000]]]', '/c:20', '/f:text']
             res = subprocess.run(cmd, capture_output=True, text=True, timeout=1.5)
             if res.returncode == 0:
-                return res.stdout.count("Event[")
+                self._wevt_cached_count = res.stdout.count("Event[")
         except Exception:
             pass
-        return 0
+        self._wevt_cached_time = now
+        return self._wevt_cached_count
 
     def collect_summary(self) -> Dict[str, Any]:
         now = time.time()

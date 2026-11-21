@@ -15,8 +15,15 @@ class ServiceMonitor:
     def __init__(self, services: Optional[List[str]] = None):
         self.monitored_services = services or self.DEFAULT_SERVICES
         self._last_states: Dict[str, str] = {}
+        self._cached_results = None
+        self._cached_time = 0.0
 
     def collect(self) -> Dict[str, Any]:
+        import time
+        now = time.time()
+        if self._cached_results and (now - self._cached_time) < 10.0:
+            return self._cached_results
+
         results = []
         transitions = []
         running_count = 0
@@ -63,9 +70,12 @@ class ServiceMonitor:
                 })
             running_count = len(self.monitored_services)
 
-        return {
+        res = {
             "monitored_service_count": len(self.monitored_services),
             "running_service_count": running_count,
             "services": results,
             "state_transitions": transitions
         }
+        self._cached_results = res
+        self._cached_time = now
+        return res

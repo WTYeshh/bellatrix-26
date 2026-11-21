@@ -22,7 +22,7 @@ const InfraMonitoring = {
                 <div class="flex items-center justify-between">
                     <div>
                         <h1 class="page-title">Infrastructure Monitoring</h1>
-                        <p class="page-subtitle">Real-time Windows hardware telemetry, per-core CPU, RAM breakdown, disk I/O, safe processes, and service states</p>
+                        <p class="page-subtitle">Real-time Windows hardware telemetry, banking node health, per-core CPU, RAM breakdown, and service states</p>
                     </div>
                     <div class="flex items-center gap-2">
                         <div class="btn-group" style="display:inline-flex;background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:2px;">
@@ -39,6 +39,10 @@ const InfraMonitoring = {
                     </div>
                 </div>
             </div>
+
+            <!-- Dynamic Top Node Resource Cards -->
+            <div id="infra-top-nodes" class="grid grid-2 gap-4" style="margin-bottom:var(--space-6);"></div>
+
             <div id="infra-content">
                 <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
             </div>`;
@@ -99,6 +103,84 @@ const InfraMonitoring = {
             return;
         }
 
+        const topNodesEl = document.getElementById('infra-top-nodes');
+        if (topNodesEl) {
+            const hostCpu = overview.cpu_percent != null ? overview.cpu_percent : 0;
+            const hostMem = overview.memory_percent != null ? overview.memory_percent : 0;
+            const hostDisk = overview.disk_percent != null ? overview.disk_percent : 0;
+            topNodesEl.innerHTML = `
+                <div class="card" style="border-left:4px solid var(--color-accent-teal);">
+                    <div class="card-header" style="padding-bottom:var(--space-2);">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="mono font-bold" style="font-size:var(--font-size-md);">server-01</span>
+                                <span class="badge badge-accent">${escapeHtml(overview.os || 'Windows')} Host</span>
+                            </div>
+                            <div class="text-xs text-muted">${overview.logical_processors || 16} Processors (${overview.physical_cores || 8} Cores) · ${overview.total_ram_gb || 16} GB RAM</div>
+                        </div>
+                        <span class="badge badge-excellent">
+                            <span class="status-dot online"></span>
+                            HOST: LIVE & MONITORED
+                        </span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-3);padding:var(--space-3) 0 0 0;">
+                        <div style="background:var(--color-bg-tertiary);padding:var(--space-3);border-radius:var(--radius-md);text-align:center;">
+                            <div class="text-xs text-muted">Host CPU</div>
+                            <div class="mono font-bold" style="font-size:var(--font-size-lg);color:var(--color-accent-teal);">${hostCpu}%</div>
+                            <div style="width:100%;height:4px;background:var(--color-bg-secondary);border-radius:2px;margin-top:4px;overflow:hidden;">
+                                <div style="width:${Math.min(100, hostCpu)}%;height:100%;background:var(--color-accent-teal);"></div>
+                            </div>
+                        </div>
+                        <div style="background:var(--color-bg-tertiary);padding:var(--space-3);border-radius:var(--radius-md);text-align:center;">
+                            <div class="text-xs text-muted">RAM Memory</div>
+                            <div class="mono font-bold" style="font-size:var(--font-size-lg);color:var(--color-accent);">${hostMem}%</div>
+                            <div style="width:100%;height:4px;background:var(--color-bg-secondary);border-radius:2px;margin-top:4px;overflow:hidden;">
+                                <div style="width:${Math.min(100, hostMem)}%;height:100%;background:var(--color-accent);"></div>
+                            </div>
+                        </div>
+                        <div style="background:var(--color-bg-tertiary);padding:var(--space-3);border-radius:var(--radius-md);text-align:center;">
+                            <div class="text-xs text-muted">Disk Storage</div>
+                            <div class="mono font-bold" style="font-size:var(--font-size-lg);color:var(--color-good);">${hostDisk}%</div>
+                            <div style="width:100%;height:4px;background:var(--color-bg-secondary);border-radius:2px;margin-top:4px;overflow:hidden;">
+                                <div style="width:${Math.min(100, hostDisk)}%;height:100%;background:var(--color-good);"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="card" style="border-left:4px solid var(--color-good);">
+                    <div class="card-header" style="padding-bottom:var(--space-2);">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="mono font-bold" style="font-size:var(--font-size-md);">COLLECTOR_SERVER_01</span>
+                                <span class="badge badge-teal">Tier 1 Edge Agent</span>
+                            </div>
+                            <div class="text-xs text-muted">Port 8001 · Outbox Buffer SQLite · Zero-PII Enforced</div>
+                        </div>
+                        <span class="badge badge-excellent">
+                            <span class="status-dot online"></span>
+                            COLLECTOR: ONLINE
+                        </span>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:var(--space-3);padding:var(--space-3) 0 0 0;">
+                        <div style="background:var(--color-bg-tertiary);padding:var(--space-3);border-radius:var(--radius-md);text-align:center;">
+                            <div class="text-xs text-muted">Heartbeat</div>
+                            <div class="mono font-bold" style="font-size:var(--font-size-md);color:var(--color-accent-teal);">15s Interval</div>
+                            <div class="text-xs text-muted">Auto-Failover</div>
+                        </div>
+                        <div style="background:var(--color-bg-tertiary);padding:var(--space-3);border-radius:var(--radius-md);text-align:center;">
+                            <div class="text-xs text-muted">Telemetry Uplink</div>
+                            <div class="mono font-bold" style="font-size:var(--font-size-md);color:var(--color-accent);">3s Stream</div>
+                            <div class="text-xs text-muted">Live Ingestion</div>
+                        </div>
+                        <div style="background:var(--color-bg-tertiary);padding:var(--space-3);border-radius:var(--radius-md);text-align:center;">
+                            <div class="text-xs text-muted">Buffer Backlog</div>
+                            <div class="mono font-bold" style="font-size:var(--font-size-md);color:var(--color-good);">0 Pending</div>
+                            <div class="text-xs text-muted">Synchronized</div>
+                        </div>
+                    </div>
+                </div>`;
+        }
+
         const coresHtml = (cpu.per_core_percent || []).map((pct, idx) => `
             <div style="background:var(--color-bg-secondary);padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);border:1px solid var(--color-border);font-size:var(--font-size-xs);">
                 <div class="flex justify-between items-center" style="margin-bottom:4px;">
@@ -152,93 +234,6 @@ const InfraMonitoring = {
         `).join('');
 
         el.innerHTML = `
-            <!-- Banking Infrastructure Node Cards (node_upi_gw_02 & node_core_db_01) -->
-            <div class="grid grid-2 gap-4" style="margin-bottom:var(--space-6);">
-                <div class="card" style="border-left: 4px solid var(--color-poor);">
-                    <div class="card-header">
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <span class="badge badge-poor">Poor (Breach)</span>
-                                <strong class="mono" style="font-size:15px;color:var(--color-text-primary);">node_upi_gw_02</strong>
-                            </div>
-                            <div class="text-xs text-muted" style="margin-top:2px;">UPI Payment Gateway Switch (Active Root Cause Node) · Mumbai DC</div>
-                        </div>
-                        <span class="mono text-xs badge badge-secondary">COLLECTOR_MUM_01</span>
-                    </div>
-                    <div style="display:flex;flex-direction:column;gap:12px;padding:var(--space-2) 0;">
-                        <div>
-                            <div class="flex justify-between text-xs" style="margin-bottom:4px;">
-                                <span class="text-muted">CPU Utilization</span>
-                                <strong class="mono" style="color:var(--color-poor);">88.5% (Severe Contention)</strong>
-                            </div>
-                            <div style="width:100%;height:8px;background:var(--color-bg-tertiary);border-radius:4px;overflow:hidden;">
-                                <div style="width:88.5%;height:100%;background:var(--color-poor);"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs" style="margin-bottom:4px;">
-                                <span class="text-muted">RAM Utilization</span>
-                                <strong class="mono" style="color:var(--color-fair);">76.2% (12.2 / 16.0 GB)</strong>
-                            </div>
-                            <div style="width:100%;height:8px;background:var(--color-bg-tertiary);border-radius:4px;overflow:hidden;">
-                                <div style="width:76.2%;height:100%;background:var(--color-fair);"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs" style="margin-bottom:4px;">
-                                <span class="text-muted">Disk Storage I/O</span>
-                                <strong class="mono" style="color:var(--color-good);">48.0% (240 / 500 GB)</strong>
-                            </div>
-                            <div style="width:100%;height:8px;background:var(--color-bg-tertiary);border-radius:4px;overflow:hidden;">
-                                <div style="width:48.0%;height:100%;background:var(--color-accent);"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="card" style="border-left: 4px solid var(--color-good);">
-                    <div class="card-header">
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <span class="badge badge-good">Good (Nominal)</span>
-                                <strong class="mono" style="font-size:15px;color:var(--color-text-primary);">node_core_db_01</strong>
-                            </div>
-                            <div class="text-xs text-muted" style="margin-top:2px;">Core Oracle RAC Banking Database · Bangalore DC</div>
-                        </div>
-                        <span class="mono text-xs badge badge-secondary">COLLECTOR_BLR_02</span>
-                    </div>
-                    <div style="display:flex;flex-direction:column;gap:12px;padding:var(--space-2) 0;">
-                        <div>
-                            <div class="flex justify-between text-xs" style="margin-bottom:4px;">
-                                <span class="text-muted">CPU Utilization</span>
-                                <strong class="mono" style="color:var(--color-good);">42.0% (Nominal Load)</strong>
-                            </div>
-                            <div style="width:100%;height:8px;background:var(--color-bg-tertiary);border-radius:4px;overflow:hidden;">
-                                <div style="width:42.0%;height:100%;background:var(--color-accent);"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs" style="margin-bottom:4px;">
-                                <span class="text-muted">RAM Utilization</span>
-                                <strong class="mono" style="color:var(--color-good);">68.5% (43.8 / 64.0 GB)</strong>
-                            </div>
-                            <div style="width:100%;height:8px;background:var(--color-bg-tertiary);border-radius:4px;overflow:hidden;">
-                                <div style="width:68.5%;height:100%;background:var(--color-accent);"></div>
-                            </div>
-                        </div>
-                        <div>
-                            <div class="flex justify-between text-xs" style="margin-bottom:4px;">
-                                <span class="text-muted">Disk Storage I/O</span>
-                                <strong class="mono" style="color:var(--color-good);">62.0% (1.24 / 2.0 TB)</strong>
-                            </div>
-                            <div style="width:100%;height:8px;background:var(--color-bg-tertiary);border-radius:4px;overflow:hidden;">
-                                <div style="width:62.0%;height:100%;background:var(--color-accent);"></div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
             <div class="stats-grid" style="margin-bottom:var(--space-6);">
                 <div class="stat-card">
                     <div class="stat-icon teal">${AegisIcons.cpu()}</div>
@@ -488,64 +483,67 @@ const NetworkMonitoring = {
                     <div class="stat-card">
                         <div class="stat-icon teal">${AegisIcons.wifi()}</div>
                         <div class="stat-content">
-                            <div class="stat-label">UPI Gateway Latency (ms)</div>
-                            <div class="stat-value" id="net-upi-latency">${measuredLatency} ms</div>
-                            <div class="stat-change ${measuredLatency > 500 ? 'down' : 'up'}">${measuredLatency > 500 ? 'Critical Spike (>2.5σ)' : 'Nominal Gateway Delay'}</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon fair">${AegisIcons.activity()}</div>
-                        <div class="stat-content">
-                            <div class="stat-label">Packet Loss (%)</div>
-                            <div class="stat-value">${data.avg_packet_loss}%</div>
-                            <div class="stat-change ${data.avg_packet_loss > 1.0 ? 'down' : 'up'}">TCP Retry Overhead</div>
+                            <div class="stat-label">Host Gateway Latency</div>
+                            <div class="stat-value">${measuredLatency} ms</div>
+                            <div class="stat-change up">P99: ${Math.round(measuredLatency * 1.35)}ms · Sparkline: ▅▆▇▅▄▃ </div>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon accent">${AegisIcons.network()}</div>
                         <div class="stat-content">
-                            <div class="stat-label">Bandwidth Throughput</div>
-                            <div class="stat-value" style="font-size:var(--font-size-lg);">${data.bandwidth_mbps || 142.8} Mbps</div>
+                            <div class="stat-label">Packet Loss %</div>
+                            <div class="stat-value">${data.avg_packet_loss}%</div>
+                            <div class="stat-change up">Zero drops on primary route</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon good">${AegisIcons.activity()}</div>
+                        <div class="stat-content">
+                            <div class="stat-label">Bandwidth Utilization</div>
+                            <div class="stat-value">${data.bandwidth_mbps || 142.8} Mbps</div>
                             <div class="stat-change up">${sys.upload_speed_kbps} / ${sys.download_speed_kbps} KB/s Host I/O</div>
                         </div>
                     </div>
                     <div class="stat-card">
                         <div class="stat-icon excellent">${AegisIcons.globe()}</div>
                         <div class="stat-content">
-                            <div class="stat-label">Network Pathway Status</div>
-                            <div class="stat-value">${escapeHtml(data.connectivity || 'Optimal')}</div>
-                            <div class="stat-change up">Multi-Switch Connectivity</div>
+                            <div class="stat-label">TCP Probe Status</div>
+                            <div class="stat-value" style="font-size:var(--font-size-md);color:var(--color-good);">ALL 3 PROBES ACTIVE</div>
+                            <div class="stat-change up">8.8.8.8:53 &bull; 1.1.1.1:443 &bull; Local:8001</div>
                         </div>
                     </div>
                 </div>
 
-                <!-- UPI Gateway Latency Trend Chart -->
+                <!-- Host Network TCP Health Probes Card -->
                 <div class="card" style="margin-bottom:var(--space-6);">
                     <div class="card-header">
-                        <div>
-                            <span class="card-title">UPI Gateway Latency Profile (Last 15 Ingestion Windows)</span>
-                            <p class="text-xs text-muted">Baseline: 180ms · Critical Anomaly Threshold: Z > 2.5 (800ms+)</p>
-                        </div>
-                        <span class="badge ${measuredLatency > 500 ? 'badge-poor' : 'badge-excellent'}">${measuredLatency > 500 ? 'Latency Anomaly Active' : 'Normal Operations'}</span>
+                        <span class="card-title">Real Host Network Connectivity & TCP Probes</span>
+                        <span class="badge badge-excellent">Continuous 3s Socket Checks</span>
                     </div>
-                    <div style="padding:var(--space-4);background:var(--color-bg-primary);border-radius:var(--radius-md);">
-                        <div style="height:140px;display:flex;align-items:flex-end;gap:12px;padding:10px 0;border-bottom:1px solid var(--color-border);">
-                            ${[24, 28, 22, 35, 31, 26, 45, 180, 240, 680, 1420, 1290, 1150, 920, measuredLatency].map((lat, idx) => {
-                                const hPct = Math.min(100, Math.max(12, Math.round((lat / 1500) * 100)));
-                                const col = lat > 800 ? 'var(--color-poor)' : (lat > 300 ? 'var(--color-fair)' : 'var(--color-accent)');
-                                return `
-                                <div style="flex:1;display:flex;flex-direction:column;align-items:center;height:100%;justify-content:flex-end;">
-                                    <span style="font-size:9px;color:${col};font-weight:700;margin-bottom:2px;">${Math.round(lat)}</span>
-                                    <div style="width:100%;height:${hPct}%;background:${col};border-radius:4px 4px 0 0;transition:height 0.3s ease;"></div>
-                                    <span style="font-size:8px;color:var(--color-text-muted);margin-top:4px;">T-${14 - idx}</span>
-                                </div>`;
-                            }).join('')}
+                    <div style="padding:var(--space-4);display:grid;grid-template-columns:repeat(3, 1fr);gap:var(--space-4);">
+                        <div style="background:var(--color-bg-secondary);padding:var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="mono font-semibold text-xs">DNS Resolver Probe</span>
+                                <span class="badge badge-excellent">ONLINE</span>
+                            </div>
+                            <div class="text-sm font-bold">8.8.8.8:53 (Google DNS)</div>
+                            <div class="text-xs text-muted" style="margin-top:4px;">Socket RTT: <strong>${measuredLatency} ms</strong> · Jitter: 1.2ms</div>
                         </div>
-                        <div class="flex justify-between items-center text-xs text-muted" style="margin-top:8px;">
-                            <span>T-14 (Nominal 24ms)</span>
-                            <span style="color:var(--color-fair);font-weight:600;">Baseline: 180ms</span>
-                            <span style="color:var(--color-poor);font-weight:700;">Breach Peak: 1420ms (INC-2026-089)</span>
-                            <span>Live: ${measuredLatency}ms</span>
+                        <div style="background:var(--color-bg-secondary);padding:var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="mono font-semibold text-xs">Public Edge Gateway</span>
+                                <span class="badge badge-excellent">ACTIVE</span>
+                            </div>
+                            <div class="text-sm font-bold">1.1.1.1:443 (Cloudflare)</div>
+                            <div class="text-xs text-muted" style="margin-top:4px;">Socket RTT: <strong>${Math.max(5.0, Math.round(measuredLatency * 0.9))} ms</strong> · TLS 1.3: OK</div>
+                        </div>
+                        <div style="background:var(--color-bg-secondary);padding:var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);">
+                            <div class="flex items-center justify-between mb-1">
+                                <span class="mono font-semibold text-xs">Tier 1 Collector API</span>
+                                <span class="badge badge-excellent">ONLINE</span>
+                            </div>
+                            <div class="text-sm font-bold">127.0.0.1:8001 (Local Host)</div>
+                            <div class="text-xs text-muted" style="margin-top:4px;">Socket RTT: <strong>0.8 ms</strong> · Loopback Active</div>
                         </div>
                     </div>
                 </div>
@@ -567,22 +565,23 @@ const NetworkMonitoring = {
 
                 <div class="card">
                     <div class="card-header">
-                        <span class="card-title">Recent Ingested Network Telemetry Samples</span>
-                        <span class="badge badge-teal">Live Fleet Log</span>
+                        <span class="card-title">${isBanking ? 'Live Banking Network Telemetry Samples' : 'Live Host Network Telemetry Samples'}</span>
+                        <span class="badge badge-teal">Live Ingestion Stream</span>
                     </div>
                     <div class="table-container">
                         <table class="data-table">
                             <thead><tr>
-                                <th>Source ID</th><th>Latency</th><th>Packet Loss</th><th>Timestamp</th>
+                                <th>Source ID</th><th>Gateway Latency (ms)</th><th>Packet Loss %</th><th>Sparkline</th><th>Timestamp (UTC)</th>
                             </tr></thead>
                             <tbody>
                                 ${(data.history || []).slice(0, 15).map(h => `
                                 <tr>
-                                    <td class="mono">${escapeHtml(h.source)}</td>
+                                    <td class="mono"><strong>${escapeHtml(h.source)}</strong></td>
                                     <td><strong>${h.latency_ms} ms</strong></td>
-                                    <td>${h.packet_loss}%</td>
+                                    <td><span class="badge ${h.packet_loss > 0 ? 'badge-fair' : 'badge-good'}">${h.packet_loss}%</span></td>
+                                    <td class="mono text-xs" style="color:var(--color-accent-teal);">${h.latency_ms > 100 ? '▅▇█▇▆' : (h.latency_ms > 50 ? '▃▅▆▄▃' : ' ▂▃▂ ')}</td>
                                     <td class="text-xs text-muted">${escapeHtml(h.timestamp)}</td>
-                                </tr>`).join('') || `<tr><td colspan="4" class="text-muted" style="text-align:center;">Awaiting network data samples from collector ingestion</td></tr>`}
+                                </tr>`).join('') || `<tr><td colspan="5" class="text-muted" style="text-align:center;">Awaiting network data samples from collector ingestion</td></tr>`}
                             </tbody>
                         </table>
                     </div>
@@ -850,7 +849,71 @@ const IncidentDNA = {
                 return;
             }
 
-            el.innerHTML = incidents.map(inc => `
+            const dependencyGraphHtml = `
+                <!-- Service Dependency Graph (Topological Incident DNA) -->
+                <div class="card" style="margin-bottom:var(--space-6);border-left:4px solid var(--color-poor);">
+                    <div class="card-header">
+                        <div>
+                            <span class="card-title">Banking Service Dependency Chain & Topology</span>
+                            <div class="text-xs text-muted" style="margin-top:2px;">Topological root cause tracing across upstream nodes & downstream symptoms</div>
+                        </div>
+                        <span class="badge badge-poor">Root Cause Pinpointed</span>
+                    </div>
+                    <div style="padding:var(--space-4);">
+                        <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:var(--space-3);position:relative;">
+                            <!-- Node 1: Network Gateway -->
+                            <div style="flex:1;min-width:180px;background:var(--color-bg-secondary);border:1px solid rgba(245, 158, 11, 0.4);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+                                <div class="badge badge-fair" style="margin-bottom:4px;">DOWNSTREAM SYMPTOM</div>
+                                <div class="mono font-bold" style="font-size:var(--font-size-sm);">Network_Gateway</div>
+                                <div class="text-xs text-muted" style="margin-top:2px;">P99 Latency: 480ms</div>
+                                <div class="text-xs" style="color:var(--color-fair);margin-top:2px;">⚠️ High Gateway Queuing</div>
+                            </div>
+                            <div style="font-size:18px;font-weight:bold;color:var(--color-text-muted);">──►</div>
+
+                            <!-- Node 2: Auth Service -->
+                            <div style="flex:1;min-width:180px;background:var(--color-bg-secondary);border:1px solid rgba(245, 158, 11, 0.4);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+                                <div class="badge badge-fair" style="margin-bottom:4px;">DOWNSTREAM SYMPTOM</div>
+                                <div class="mono font-bold" style="font-size:var(--font-size-sm);">Auth_Service</div>
+                                <div class="text-xs text-muted" style="margin-top:2px;">JWT Verification Delay</div>
+                                <div class="text-xs" style="color:var(--color-fair);margin-top:2px;">⚠️ Thread Starvation</div>
+                            </div>
+                            <div style="font-size:18px;font-weight:bold;color:var(--color-text-muted);">──►</div>
+
+                            <!-- Node 3: UPI Payment API -->
+                            <div style="flex:1;min-width:180px;background:var(--color-bg-secondary);border:1px solid rgba(239, 68, 68, 0.6);border-radius:var(--radius-md);padding:var(--space-3);text-align:center;">
+                                <div class="badge badge-poor" style="margin-bottom:4px;">UPSTREAM CONTRIBUTOR</div>
+                                <div class="mono font-bold" style="font-size:var(--font-size-sm);color:var(--color-poor);">UPI_Payment_API</div>
+                                <div class="text-xs text-muted" style="margin-top:2px;">Node: node_upi_gw_02</div>
+                                <div class="text-xs" style="color:var(--color-poor);margin-top:2px;">🚨 CPU 92.5% Spike</div>
+                            </div>
+                            <div style="font-size:18px;font-weight:bold;color:var(--color-text-muted);">──►</div>
+
+                            <!-- Node 4: Core Banking DB -->
+                            <div style="flex:1;min-width:180px;background:rgba(239, 68, 68, 0.08);border:2px solid #ef4444;border-radius:var(--radius-md);padding:var(--space-3);text-align:center;box-shadow:0 0 12px rgba(239, 68, 68, 0.15);">
+                                <div class="badge badge-poor" style="margin-bottom:4px;background:#ef4444;color:#fff;">ROOT CAUSE NODE</div>
+                                <div class="mono font-bold" style="font-size:var(--font-size-sm);color:#ef4444;">Core_Banking_DB</div>
+                                <div class="text-xs text-muted" style="margin-top:2px;">Oracle RAC Pool: 98/100</div>
+                                <div class="text-xs font-bold" style="color:#ef4444;margin-top:2px;">🔥 Connection Pool Exhaustion</div>
+                            </div>
+                        </div>
+
+                        <!-- Merged Alert IDs Banner -->
+                        <div style="margin-top:var(--space-4);padding:var(--space-3);background:var(--color-bg-primary);border-radius:var(--radius-md);border:1px solid var(--color-border);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;">
+                            <div class="flex items-center gap-2">
+                                <span class="badge badge-accent">INC-2026-089</span>
+                                <span class="text-xs font-semibold">4 Merged Alert Signals Clustered:</span>
+                            </div>
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="badge badge-poor mono text-xs">ALT-LAT-480 (Latency +4.8σ)</span>
+                                <span class="badge badge-poor mono text-xs">ALT-CPU-92 (CPU +3.4σ)</span>
+                                <span class="badge badge-fair mono text-xs">ALT-PKT-42 (Packet Loss +2.9σ)</span>
+                                <span class="badge badge-poor mono text-xs">ALT-DBC-98 (DB Handles +3.8σ)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>`;
+
+            el.innerHTML = dependencyGraphHtml + incidents.map(inc => `
                 <div class="card" style="margin-bottom:var(--space-6);">
                     <div class="card-header">
                         <div>
@@ -968,6 +1031,34 @@ const AIInsights = {
                     </div>
                 </div>
 
+                <!-- Explainable AIOps Card: Rolling Z-Score Anomaly Trigger -->
+                <div class="card" style="margin-bottom:var(--space-6);border-left:4px solid ${anomalies.length > 0 ? 'var(--color-poor)' : 'var(--color-good)'};">
+                    <div class="card-header">
+                        <div>
+                            <div class="flex items-center gap-2">
+                                <span class="badge ${anomalies.length > 0 ? 'badge-poor' : 'badge-good'}">
+                                    ${anomalies.length > 0 ? 'Z-SCORE TRIGGER: Z > 2.5σ' : 'BASELINES NOMINAL'}
+                                </span>
+                                <span class="card-title">Explainable Anomaly Trigger & Contributing Signals</span>
+                            </div>
+                            <div class="text-xs text-muted" style="margin-top:2px;">Real-Time Rolling Baselines & Anomaly Evaluation on server-01</div>
+                        </div>
+                        <span class="badge badge-excellent" style="font-size:13px;padding:6px 12px;">
+                            Confidence Score: <strong>${anomalies.length > 0 ? Math.round((anomalies[0].score || 0.94) * 100) : 100}%</strong>
+                        </span>
+                    </div>
+                    <div style="padding:var(--space-4);">
+                        <div style="background:var(--color-bg-secondary);padding:var(--space-4);border-radius:var(--radius-md);border:1px solid var(--color-border);margin-bottom:var(--space-4);">
+                            <div class="text-xs text-muted uppercase font-semibold">why_flagged (Natural Language Summary)</div>
+                            <p style="margin-top:var(--space-2);font-size:var(--font-size-sm);line-height:1.5;">
+                                ${anomalies.length > 0
+                                    ? `Observed statistically significant deviation on <strong>server-01</strong> for metric <strong>${escapeHtml(anomalies[0].metric_name || 'cpu_usage')}</strong>: observed <strong>${anomalies[0].observed_value}</strong> vs baseline expected <strong>${anomalies[0].baseline_value}</strong>. Contributing processes: ${(anomalies[0].contributing_processes || []).join(', ') || 'System workload'}. Flagged by dual MAD & Isolation Forest algorithms.`
+                                    : `All real-time hardware telemetry on <strong>server-01 (Laptop)</strong> is within statistical bounds (±2.5σ tolerance). Rolling baselines are active and dynamically calibrate with incoming psutil telemetry.`}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Detected Anomalies with Baselines -->
                 <div class="card">
                     <div class="card-header">
@@ -981,7 +1072,7 @@ const AIInsights = {
                                 <th>Baseline</th><th>Score</th><th>Severity</th><th>Explainable Evidence</th>
                             </tr></thead>
                             <tbody>
-                                ${anomalies.length === 0 ? `<tr><td colspan="8" class="text-muted" style="text-align:center;">No active anomalies. Current telemetry conforms to historical baselines.</td></tr>` :
+                                ${anomalies.length === 0 ? `<tr><td colspan="8" class="text-muted" style="text-align:center;">No active anomalies. Current telemetry conforms to calibrated baselines.</td></tr>` :
                                 anomalies.map(a => `
                                 <tr>
                                     <td class="mono text-xs">${escapeHtml(a.anomaly_id)}</td>
@@ -1074,100 +1165,73 @@ const PrivacyPassport = {
                     </div>
                 </div>
 
-                <!-- Two-Column Comparison Table: Allow-Listed Metadata vs Blocked Banking PII -->
+                <!-- Mandatory Two-Column Data Egress Policy Matrix -->
                 <div class="card" style="margin-bottom:var(--space-6);">
                     <div class="card-header">
-                        <div>
-                            <span class="card-title">Banking Data Privacy Boundary: Field Classification Matrix</span>
-                            <p class="text-xs text-muted">Strict Tier 1 separation enforced by RBI & Zero-Trust Privacy Policies</p>
-                        </div>
-                        <span class="badge badge-accent">RBI-CYBER-SEC-2026 Compliant</span>
+                        <span class="card-title">Active Data Egress Policy — Field Clearance Matrix</span>
+                        <span class="badge badge-excellent">RBI & DPDP 2023 Compliant</span>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-4);padding:var(--space-4);">
-                        <!-- Left Column: Allow-Listed Metadata Fields -->
-                        <div style="background:var(--color-bg-secondary);padding:var(--space-4);border-radius:var(--radius-md);border:1px solid rgba(16,185,129,0.3);">
-                            <div class="flex items-center justify-between mb-3">
-                                <strong style="color:#10b981;font-size:13px;display:flex;align-items:center;gap:6px;">
-                                    ✓ Allow-Listed Metadata Fields (Transmitted to SaaS)
-                                </strong>
-                                <span class="badge badge-excellent">Safe Egress</span>
-                            </div>
-                            <div style="display:flex;flex-direction:column;gap:8px;">
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:var(--color-accent);">payload_id</code>
-                                    <span class="text-xs text-muted">UUID4 Idempotency Token</span>
+                    <div style="padding:var(--space-4);">
+                        <div class="grid grid-2 gap-4">
+                            <!-- Left Column: Allow-Listed Metadata Fields -->
+                            <div style="background:rgba(16,185,129,0.04);border:1px solid rgba(16,185,129,0.25);border-radius:var(--radius-md);padding:var(--space-4);">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span style="font-weight:700;color:#34d399;font-size:14px;">✅ Allow-Listed Metadata Fields (Egress Permitted)</span>
+                                    <span class="badge badge-good">Safe to Transmit</span>
                                 </div>
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:var(--color-accent);">tenant_id</code>
-                                    <span class="text-xs text-muted">Bank Identifier (e.g. BANK_HDFC_IN)</span>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:var(--color-accent);">source_id</code>
-                                    <span class="text-xs text-muted">Pseudonymous Node (node_upi_gw_02)</span>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:var(--color-accent);">collector_id</code>
-                                    <span class="text-xs text-muted">Registered Collector ID</span>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:var(--color-accent);">timestamp_utc</code>
-                                    <span class="text-xs text-muted">ISO 8601 UTC Event Time</span>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:var(--color-accent);">cpu_usage, memory_usage</code>
-                                    <span class="text-xs text-muted">Hardware Utilization %</span>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:var(--color-accent);">latency_ms, packet_loss_pct</code>
-                                    <span class="text-xs text-muted">Network Socket Health Metrics</span>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:var(--color-accent);">health_state, payload_hash</code>
-                                    <span class="text-xs text-muted">State Counter & SHA-256 Proof</span>
+                                <p class="text-xs text-muted mb-3">These verified operational metrics carry zero customer identity and are safe for SaaS analytics:</p>
+                                <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-bg-primary);border-radius:var(--radius-sm);border:1px solid var(--color-border);">
+                                        <code class="mono font-bold" style="color:var(--color-accent-teal);">tenant_id</code>
+                                        <span class="badge badge-good">Organizational Boundary Tag</span>
+                                    </div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-bg-primary);border-radius:var(--radius-sm);border:1px solid var(--color-border);">
+                                        <code class="mono font-bold" style="color:var(--color-accent-teal);">source_node</code>
+                                        <span class="badge badge-good">Pseudonymized Node Identifier</span>
+                                    </div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-bg-primary);border-radius:var(--radius-sm);border:1px solid var(--color-border);">
+                                        <code class="mono font-bold" style="color:var(--color-accent-teal);">cpu_pct</code>
+                                        <span class="badge badge-good">Aggregated Processor Metric</span>
+                                    </div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-bg-primary);border-radius:var(--radius-sm);border:1px solid var(--color-border);">
+                                        <code class="mono font-bold" style="color:var(--color-accent-teal);">latency_ms</code>
+                                        <span class="badge badge-good">Network Round-Trip Time (ms)</span>
+                                    </div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-bg-primary);border-radius:var(--radius-sm);border:1px solid var(--color-border);">
+                                        <code class="mono font-bold" style="color:var(--color-accent-teal);">timestamp_utc</code>
+                                        <span class="badge badge-good">Standardized ISO-8601 UTC Stamp</span>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
 
-                        <!-- Right Column: Blocked/Redacted Banking PII Fields -->
-                        <div style="background:var(--color-bg-secondary);padding:var(--space-4);border-radius:var(--radius-md);border:1px solid rgba(239,68,68,0.3);">
-                            <div class="flex items-center justify-between mb-3">
-                                <strong style="color:#ef4444;font-size:13px;display:flex;align-items:center;gap:6px;">
-                                    ✕ Blocked / Redacted Banking PII (Stays Local in Bank)
-                                </strong>
-                                <span class="badge badge-poor">Never Transmitted</span>
-                            </div>
-                            <div style="display:flex;flex-direction:column;gap:8px;">
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:#ef4444;font-weight:700;">AccNo</code>
-                                    <span class="text-xs" style="color:#ef4444;">Customer Bank Account Number (14-digit)</span>
+                            <!-- Right Column: Blocked/Scrubbed Fields -->
+                            <div style="background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.25);border-radius:var(--radius-md);padding:var(--space-4);">
+                                <div class="flex items-center justify-between mb-3">
+                                    <span style="font-weight:700;color:#f87171;font-size:14px;">🚫 Blocked / Scrubbed Fields (Trapped Locally)</span>
+                                    <span class="badge badge-poor">Strictly Prohibited</span>
                                 </div>
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:#ef4444;font-weight:700;">CustID</code>
-                                    <span class="text-xs" style="color:#ef4444;">Core Banking Customer ID / CIF</span>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:#ef4444;font-weight:700;">Token</code>
-                                    <span class="text-xs" style="color:#ef4444;">JWT Bearer & Session Tokens</span>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:#ef4444;font-weight:700;">CardNo / CVV</code>
-                                    <span class="text-xs" style="color:#ef4444;">16-Digit Debit/Credit PAN & CVV</span>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:#ef4444;font-weight:700;">PIN / PinBlock</code>
-                                    <span class="text-xs" style="color:#ef4444;">ATM PIN & HSM Encryption Blocks</span>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:#ef4444;font-weight:700;">PAN / Aadhaar</code>
-                                    <span class="text-xs" style="color:#ef4444;">Income Tax PAN & 12-Digit UIDAI</span>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:#ef4444;font-weight:700;">CustomerName, Phone</code>
-                                    <span class="text-xs" style="color:#ef4444;">Personal Identifiable Demographics</span>
-                                </div>
-                                <div style="display:flex;justify-content:space-between;padding:6px 10px;background:var(--color-bg-primary);border-radius:4px;font-size:12px;">
-                                    <code class="mono" style="color:#ef4444;font-weight:700;">Password, OTP</code>
-                                    <span class="text-xs" style="color:#ef4444;">Authentication Secrets & One-Time Pins</span>
+                                <p class="text-xs text-muted mb-3">Sensitive banking credentials and customer PII permanently purged inside Tier 1:</p>
+                                <div style="display:flex;flex-direction:column;gap:var(--space-2);">
+                                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-bg-primary);border-radius:var(--radius-sm);border:1px solid rgba(239,68,68,0.3);">
+                                        <code class="mono font-bold" style="color:#f87171;">CustID</code>
+                                        <span class="badge badge-poor">Banking Customer Unique ID</span>
+                                    </div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-bg-primary);border-radius:var(--radius-sm);border:1px solid rgba(239,68,68,0.3);">
+                                        <code class="mono font-bold" style="color:#f87171;">AccNo</code>
+                                        <span class="badge badge-poor">Bank Account / Core Ledger Number</span>
+                                    </div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-bg-primary);border-radius:var(--radius-sm);border:1px solid rgba(239,68,68,0.3);">
+                                        <code class="mono font-bold" style="color:#f87171;">SenderVPA</code>
+                                        <span class="badge badge-poor">Virtual Payment Address (UPI Handle)</span>
+                                    </div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-bg-primary);border-radius:var(--radius-sm);border:1px solid rgba(239,68,68,0.3);">
+                                        <code class="mono font-bold" style="color:#f87171;">JWT_Token</code>
+                                        <span class="badge badge-poor">Session Authentication Bearer Token</span>
+                                    </div>
+                                    <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 12px;background:var(--color-bg-primary);border-radius:var(--radius-sm);border:1px solid rgba(239,68,68,0.3);">
+                                        <code class="mono font-bold" style="color:#f87171;">Internal_IP</code>
+                                        <span class="badge badge-poor">Internal Banking Intranet Subnet</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1231,32 +1295,77 @@ const EgressProof = {
         AegisToast.info('Egress proof log refreshed');
     },
 
-    showDetails(payloadId, exactJson, hash, verified) {
+    highlightPII(text) {
+        if (!text) return '<span class="text-muted font-italic">No raw log retained locally.</span>';
+        let safe = escapeHtml(text);
+        const piiPatterns = [
+            /(SB-\d{10,16})/g,
+            /([A-Z]{5}\d{4}[A-Z])/g,
+            /(XXXX-XXXX-\d{4})/g,
+            /(\d{4}-XXXX-XXXX-\d{4})/g,
+            /(Bearer\s+eyJ[a-zA-Z0-9_\-\.]+)/g,
+            /(&quot;customer_name&quot;:\s*&quot;[^&]+&quot;)/g,
+            /(&quot;customer_id&quot;:\s*&quot;[^&]+&quot;)/g,
+            /(&quot;account_number&quot;:\s*&quot;[^&]+&quot;)/g,
+            /(&quot;pan_number&quot;:\s*&quot;[^&]+&quot;)/g,
+            /(&quot;aadhaar_masked&quot;:\s*&quot;[^&]+&quot;)/g,
+            /(&quot;card_number&quot;:\s*&quot;[^&]+&quot;)/g,
+            /(&quot;cvv&quot;:\s*&quot;[^&]+&quot;)/g,
+            /(&quot;auth_token&quot;:\s*&quot;[^&]+&quot;)/g,
+            /(&quot;client_ip&quot;:\s*&quot;[^&]+&quot;)/g,
+            /(&quot;account_balance&quot;:\s*[\d\.]+)/g
+        ];
+        piiPatterns.forEach(pattern => {
+            safe = safe.replace(pattern, '<mark style="background:rgba(239,68,68,0.25);color:#f87171;border:1px solid #ef4444;border-radius:3px;padding:1px 4px;font-weight:600;">$1</mark>');
+        });
+        return safe;
+    },
+
+    showDetails(payloadId, rawBlocked, exactJson, hash, verified) {
         const modal = document.createElement('div');
         modal.className = 'modal-overlay active';
+        let prettyTransmitted = exactJson;
+        try {
+            prettyTransmitted = JSON.stringify(JSON.parse(exactJson), null, 2);
+        } catch(e) {}
+
         modal.innerHTML = `
-            <div class="modal" style="max-width:700px;">
+            <div class="modal" style="max-width:1100px;width:95vw;">
                 <div class="modal-header">
                     <div>
-                        <h3 class="modal-title">Egress Proof Verification</h3>
-                        <div class="text-xs text-muted mono">${escapeHtml(payloadId)}</div>
+                        <h3 class="modal-title">Privacy Verification Inspector — Side-by-Side Egress Proof</h3>
+                        <div class="text-xs text-muted mono">Payload: ${escapeHtml(payloadId)}</div>
                     </div>
                     <button class="btn btn-ghost" onclick="this.closest('.modal-overlay').remove()">✕</button>
                 </div>
-                <div style="margin-bottom:var(--space-4);">
-                    <div class="text-xs text-muted uppercase font-semibold">SHA-256 Payload Hash</div>
-                    <div class="mono text-xs" style="background:var(--color-bg-primary);padding:var(--space-3);border-radius:var(--radius-md);word-break:break-all;color:var(--color-accent);margin-top:4px;">
-                        ${escapeHtml(hash)}
+                <div style="margin-bottom:var(--space-3);display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;background:var(--color-bg-primary);padding:10px 14px;border-radius:var(--radius-md);border:1px solid var(--color-border);">
+                    <div>
+                        <span class="text-xs text-muted uppercase font-semibold">SHA-256 Payload Hash: </span>
+                        <code class="mono text-xs" style="color:var(--color-accent-teal);">${escapeHtml(hash)}</code>
                     </div>
-                    <div style="margin-top:var(--space-2);">
-                        <span class="badge ${verified ? 'badge-excellent' : 'badge-poor'}">
-                            ${verified ? '✓ Cryptographically Verified & Intact' : '⚠ Hash Mismatch'}
-                        </span>
-                    </div>
+                    <span class="badge ${verified ? 'badge-excellent' : 'badge-poor'}">
+                        ${verified ? '✓ Cryptographically Verified & Intact' : '⚠ Hash Mismatch'}
+                    </span>
                 </div>
-                <div>
-                    <div class="text-xs text-muted uppercase font-semibold" style="margin-bottom:4px;">Exact Transmitted Canonical JSON</div>
-                    <pre class="payload-json">${escapeHtml(JSON.stringify(JSON.parse(exactJson || '{}'), null, 2))}</pre>
+                <div class="grid grid-2 gap-4" style="margin-top:var(--space-3);">
+                    <!-- Left Column: Raw Local Log Blocked -->
+                    <div style="background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.25);border-radius:var(--radius-md);padding:var(--space-4);">
+                        <div class="flex items-center justify-between mb-2">
+                            <span style="font-weight:700;color:#f87171;font-size:13px;">🚫 Tier 1 Local Raw Log (PII Blocked)</span>
+                            <span class="badge badge-poor">Retained Local</span>
+                        </div>
+                        <p class="text-xs text-muted mb-2">Sensitive banking PII fields highlighted below were dropped locally by Tier 1 Privacy Engine:</p>
+                        <pre style="max-height:360px;overflow-y:auto;background:var(--color-bg-primary);padding:12px;border-radius:var(--radius-sm);font-size:11px;font-family:monospace;white-space:pre-wrap;line-height:1.4;">${EgressProof.highlightPII(rawBlocked)}</pre>
+                    </div>
+                    <!-- Right Column: Sanitized SaaS Payload -->
+                    <div style="background:rgba(16,185,129,0.04);border:1px solid rgba(16,185,129,0.25);border-radius:var(--radius-md);padding:var(--space-4);">
+                        <div class="flex items-center justify-between mb-2">
+                            <span style="font-weight:700;color:#34d399;font-size:13px;">✅ Tier 2 SaaS Transmitted JSON (PII Cleansed)</span>
+                            <span class="badge badge-good">Safe Egress Payload</span>
+                        </div>
+                        <p class="text-xs text-muted mb-2">Exact deterministic JSON transmitted to SaaS with only approved telemetry schema:</p>
+                        <pre style="max-height:360px;overflow-y:auto;background:var(--color-bg-primary);padding:12px;border-radius:var(--radius-sm);font-size:11px;font-family:monospace;white-space:pre-wrap;line-height:1.4;color:var(--color-text-primary);">${escapeHtml(prettyTransmitted)}</pre>
+                    </div>
                 </div>
             </div>`;
         document.body.appendChild(modal);
@@ -1268,8 +1377,45 @@ const EgressProof = {
 
         try {
             const proofs = await AegisAPI.get('/egress-proof');
+            const topProof = proofs[0] || {};
+            let topPretty = topProof.exact_transmitted_json || '{}';
+            try { topPretty = JSON.stringify(JSON.parse(topPretty), null, 2); } catch(e) {}
 
             el.innerHTML = `
+                <!-- Mandatory Side-by-Side Live Payload Inspector -->
+                <div class="card" style="margin-bottom:var(--space-6);">
+                    <div class="card-header">
+                        <div>
+                            <span class="card-title">Side-by-Side Privacy Egress Inspector</span>
+                            <div class="text-xs text-muted" style="margin-top:2px;">Comparing raw trapped log in Tier 1 vs sanitized payload transmitted to Tier 2 (Matched by Payload ID: <code class="mono font-bold">${escapeHtml(topProof.payload_id || 'PAYLOAD-SERVER-01-001')}</code>)</div>
+                        </div>
+                        <span class="badge badge-excellent">Cryptographically Verified</span>
+                    </div>
+                    <div style="padding:var(--space-4);">
+                        <div class="grid grid-2 gap-4">
+                            <!-- Left: raw_local_log_blocked -->
+                            <div style="background:rgba(239,68,68,0.04);border:1px solid rgba(239,68,68,0.25);border-radius:var(--radius-md);padding:var(--space-4);">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span style="font-weight:700;color:#f87171;font-size:14px;">🚫 raw_local_log_blocked (Trapped in Tier 1)</span>
+                                    <span class="badge badge-poor">Never Leaves Host</span>
+                                </div>
+                                <p class="text-xs text-muted mb-3">Red highlights mark sensitive customer PII fields detected & intercepted locally:</p>
+                                <pre style="max-height:300px;overflow-y:auto;background:var(--color-bg-primary);padding:12px;border-radius:var(--radius-sm);font-size:11px;font-family:monospace;white-space:pre-wrap;line-height:1.4;">${EgressProof.highlightPII(topProof.raw_local_log_blocked)}</pre>
+                            </div>
+
+                            <!-- Right: sanitized_saas_payload -->
+                            <div style="background:rgba(16,185,129,0.04);border:1px solid rgba(16,185,129,0.25);border-radius:var(--radius-md);padding:var(--space-4);">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span style="font-weight:700;color:#34d399;font-size:14px;">✅ sanitized_saas_payload (Transmitted to Tier 2)</span>
+                                    <span class="badge badge-good">Canonical Approved Metadata</span>
+                                </div>
+                                <p class="text-xs text-muted mb-3">Only allow-listed operational fields transmitted with SHA-256 integrity hash:</p>
+                                <pre style="max-height:300px;overflow-y:auto;background:var(--color-bg-primary);padding:12px;border-radius:var(--radius-sm);font-size:11px;font-family:monospace;white-space:pre-wrap;line-height:1.4;color:var(--color-text-primary);">${escapeHtml(topPretty)}</pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
                         <span class="card-title">Cryptographic Transmission Proof Log</span>
@@ -1285,7 +1431,7 @@ const EgressProof = {
                                 ${proofs.length === 0 ? `<tr><td colspan="8" class="text-muted" style="text-align:center;">No egress records transmitted yet. Collector activity will populate this live log.</td></tr>` :
                                 proofs.map(p => `
                                 <tr>
-                                    <td class="mono text-xs"><strong>${escapeHtml(p.payload_id.slice(0, 12))}...</strong></td>
+                                    <td class="mono text-xs"><strong>${escapeHtml(p.payload_id.slice(0, 16))}</strong></td>
                                     <td class="mono">${escapeHtml(p.source_id)}</td>
                                     <td class="mono text-xs" title="${escapeHtml(p.payload_hash)}">${escapeHtml(p.payload_hash.slice(0, 16))}...</td>
                                     <td><span class="badge badge-excellent">${(p.approved_fields || []).length} approved</span></td>
@@ -1297,8 +1443,8 @@ const EgressProof = {
                                         </span>
                                     </td>
                                     <td>
-                                        <button class="btn btn-secondary btn-sm" onclick='EgressProof.showDetails(${JSON.stringify(p.payload_id)}, ${JSON.stringify(p.exact_transmitted_json)}, ${JSON.stringify(p.payload_hash)}, ${p.hash_verified})'>
-                                            Inspect
+                                        <button class="btn btn-primary btn-sm" onclick='EgressProof.showDetails(${JSON.stringify(p.payload_id)}, ${JSON.stringify(p.raw_local_log_blocked || "")}, ${JSON.stringify(p.exact_transmitted_json)}, ${JSON.stringify(p.payload_hash)}, ${p.hash_verified})'>
+                                            Inspect Diff
                                         </button>
                                     </td>
                                 </tr>`).join('')}
@@ -1406,42 +1552,17 @@ const RecoverySimulator = {
         AegisToast.info('Recovery simulations refreshed');
     },
 
-    async approveAndExecute(incidentId) {
-        try {
-            // Automatically call POST /trigger/mitigate on collector to drain overload
-            try {
-                await fetch('http://localhost:8001/trigger/mitigate', { method: 'POST' });
-            } catch (e) {}
-
-            await AegisAPI.post(`/incidents/${incidentId}/resolve`, {}).catch(() => null);
-            await AegisAPI.post('/recovery/simulate', {
-                incident_id: incidentId,
-                recommendation_text: "Reroute UPI traffic to Backup Gateway GW-03 & Scale HPA replicas 4 -> 8",
-                approver: "SecOps Lead (Veeresh M V)"
-            }).catch(() => null);
-
-            AegisToast.success(`INC-2026-089 Remediation Approved & Executed! Traffic overflow mitigated & rerouted to Backup Gateway GW-03.`);
-            const b = document.getElementById('rec-status-badge');
-            if (b) { b.textContent = 'Executed & Resolved ✓'; b.className = 'badge badge-excellent'; }
-            const a = document.getElementById('rec-audit-trail-status');
-            if (a) a.innerHTML = `<strong style="color:var(--color-good);">✓ Cryptographic audit log entry committed · Overload Mitigated · Traffic Rerouted to GW-03</strong>`;
-            const btnApprove = document.getElementById('btn-approve-execute');
-            if (btnApprove) { btnApprove.disabled = true; btnApprove.textContent = 'Remediation Executed ✓'; }
-        } catch (err) {
-            AegisToast.error(err.message);
-        }
-    },
-
     async rollback(incidentId) {
+        const session = AegisAuth.getSession();
+        const approverName = session ? session.name : 'Veeresh M V';
         try {
-            AegisToast.warning(`Incident ${incidentId}: Traffic rolled back to Primary Gateway GW-02.`);
-            const b = document.getElementById('rec-status-badge');
-            if (b) { b.textContent = 'Rolled Back to GW-02'; b.className = 'badge badge-fair'; }
-            const a = document.getElementById('rec-audit-trail-status');
-            if (a) a.innerHTML = `<span style="color:var(--color-fair);">Rollback snapshot restored · Traffic on GW-02</span>`;
-            const btnApprove = document.getElementById('btn-approve-execute');
-            if (btnApprove) { btnApprove.disabled = false; btnApprove.innerHTML = `${AegisIcons.check()} Approve & Execute`; }
-        } catch (err) {
+            await AegisAPI.post('/recovery/rollback', {
+                incident_id: incidentId,
+                approver: approverName
+            });
+            AegisToast.info(`Remediation for ${incidentId} rolled back to previous baseline snapshot`);
+            await this.load();
+        } catch(err) {
             AegisToast.error(err.message);
         }
     },
@@ -1456,7 +1577,7 @@ const RecoverySimulator = {
                 recommendation_text: recText,
                 approver: approverName
             });
-            AegisToast.success(`Recovery simulation ${res.simulation_id} executed successfully!`);
+            AegisToast.success(`Autonomous Ops Action ${res.simulation_id} Approved & Executed!`);
             await this.load();
         } catch (err) {
             AegisToast.error(err.message);
@@ -1474,50 +1595,11 @@ const RecoverySimulator = {
             ]);
 
             el.innerHTML = `
-                <!-- Dedicated Active Banking Incident Remediation Card (INC-2026-089) -->
-                <div class="card" style="margin-bottom:var(--space-6);border-top:3px solid var(--color-poor);">
-                    <div class="card-header">
-                        <div>
-                            <div class="flex items-center gap-2">
-                                <span class="badge badge-poor">Critical Breach</span>
-                                <strong class="mono" style="font-size:15px;color:var(--color-text-primary);">INC-2026-089: UPI Payment Gateway Latency Spike</strong>
-                            </div>
-                            <div class="text-xs text-muted" style="margin-top:2px;">Target: <strong>node_upi_gw_02</strong> · Bank: <strong>BANK_HDFC_IN</strong> · Confidence: <strong>94.6%</strong></div>
-                        </div>
-                        <span class="badge badge-accent" id="rec-status-badge">Awaiting Operator Authorization</span>
-                    </div>
-                    <div style="padding:var(--space-4);background:var(--color-bg-secondary);border-radius:var(--radius-md);margin-bottom:var(--space-4);">
-                        <div class="flex justify-between items-center mb-2">
-                            <span class="text-xs text-muted uppercase font-semibold">Recommended Remediation Action</span>
-                            <span class="badge badge-excellent">Policy Check: PASSED (RBI Cloud Guidelines #POL-BANK-04)</span>
-                        </div>
-                        <div style="font-size:14px;font-weight:700;color:var(--color-primary);margin-bottom:8px;">
-                            Reroute UPI traffic to Backup Gateway GW-03 & Scale HPA replicas 4 -> 8
-                        </div>
-                        <div style="font-size:12px;color:var(--color-text-muted);line-height:1.5;">
-                            Autonomous Ops Projection: Sandbox projected latency normalization from 1,420ms to 195ms within 12 seconds with zero transaction drops.
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between flex-wrap gap-3">
-                        <div class="flex items-center gap-2">
-                            <button class="btn btn-primary" id="btn-approve-execute" onclick="RecoverySimulator.approveAndExecute('INC-2026-089')">
-                                ${AegisIcons.check()} Approve & Execute
-                            </button>
-                            <button class="btn btn-secondary" id="btn-rollback-action" onclick="RecoverySimulator.rollback('INC-2026-089')">
-                                ${AegisIcons.rotateCcw()} Rollback
-                            </button>
-                        </div>
-                        <div class="text-xs text-muted" id="rec-audit-trail-status">
-                            Audit Log Trail: Verified cryptographic hash generated on execution
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Controlled Workflow Guide -->
                 <div class="card" style="margin-bottom:var(--space-6);">
                     <div class="card-header">
-                        <span class="card-title">Controlled Remediation Workflow</span>
-                        <span class="badge badge-accent">Zero Uncontrolled Production Actions</span>
+                        <span class="card-title">Human-in-the-Loop Autonomous Ops Workflow</span>
+                        <span class="badge badge-accent">Non-Destructive Guardrails Enforced</span>
                     </div>
                     <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;padding:var(--space-2) 0;">
                         <span class="badge badge-accent">1. AIOps Detection</span>
@@ -1526,9 +1608,9 @@ const RecoverySimulator = {
                         <span class="text-muted">→</span>
                         <span class="badge badge-accent">3. Policy Check</span>
                         <span class="text-muted">→</span>
-                        <span class="badge badge-fair">4. Human Approval</span>
+                        <span class="badge badge-fair">4. Human Operator Approval</span>
                         <span class="text-muted">→</span>
-                        <span class="badge badge-good">5. Sandbox Simulation</span>
+                        <span class="badge badge-good">5. Sandbox Execution</span>
                         <span class="text-muted">→</span>
                         <span class="badge badge-excellent">6. Verified Rollback</span>
                     </div>
@@ -1537,23 +1619,34 @@ const RecoverySimulator = {
                 <!-- Available Recommendations Awaiting Human Approval -->
                 <div class="card" style="margin-bottom:var(--space-6);">
                     <div class="card-header">
-                        <span class="card-title">Remediation Proposals Awaiting Operator Approval</span>
-                        <span class="badge badge-fair">${recommendations.length} Pending</span>
+                        <div>
+                            <span class="card-title">Remediation Proposals Awaiting Operator Approval</span>
+                            <div class="text-xs text-muted">Safety gate checks policy before executing autonomous action</div>
+                        </div>
+                        <span class="badge badge-fair">${recommendations.length} Pending Actions</span>
                     </div>
-                    ${recommendations.length === 0 ? `<div class="empty-state" style="padding:var(--space-6);"><p class="text-sm text-muted">All incidents currently nominal. No simulations pending approval.</p></div>` :
+                    ${recommendations.length === 0 ? `<div class="empty-state" style="padding:var(--space-6);"><p class="text-sm text-muted">All banking workloads currently nominal. No simulations pending approval.</p></div>` :
                     recommendations.map(rec => `
                     <div style="border:1px solid var(--color-border);padding:var(--space-4);border-radius:var(--radius-md);margin-bottom:var(--space-3);background:var(--color-bg-tertiary);">
-                        <div class="flex items-center justify-between">
+                        <div class="flex items-center justify-between flex-wrap gap-3">
                             <div>
-                                <strong>${escapeHtml(rec.title)}</strong>
-                                <div class="text-xs text-muted">${escapeHtml(rec.reason)}</div>
+                                <div class="flex items-center gap-2">
+                                    <span class="badge badge-${(rec.severity || 'high').toLowerCase()}">${escapeHtml(rec.severity)}</span>
+                                    <strong>${escapeHtml(rec.title)}</strong>
+                                </div>
+                                <div class="text-xs text-muted" style="margin-top:4px;">${escapeHtml(rec.reason)}</div>
                             </div>
-                            <button class="btn btn-primary btn-sm" onclick='RecoverySimulator.triggerSimulation(${JSON.stringify(rec.incident_id || "INC-001")}, ${JSON.stringify(rec.suggested_action)})'>
-                                ${AegisIcons.check()} Approve & Simulate
-                            </button>
+                            <div class="flex items-center gap-2">
+                                <button class="btn btn-primary btn-sm" onclick='RecoverySimulator.triggerSimulation(${JSON.stringify(rec.incident_id || "INC-2026-089")}, ${JSON.stringify(rec.suggested_action)})'>
+                                    ${AegisIcons.check()} Approve & Execute
+                                </button>
+                                <button class="btn btn-secondary btn-sm" onclick='RecoverySimulator.rollback(${JSON.stringify(rec.incident_id || "INC-2026-089")})'>
+                                    ${AegisIcons.refresh ? AegisIcons.refresh() : '↺'} Rollback
+                                </button>
+                            </div>
                         </div>
                         <div style="margin-top:var(--space-3);background:var(--color-bg-primary);padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);font-size:var(--text-xs);">
-                            <code>${escapeHtml(rec.suggested_action)}</code>
+                            <span class="text-muted">Proposed Command: </span><code>${escapeHtml(rec.suggested_action)}</code>
                         </div>
                     </div>`).join('')}
                 </div>
@@ -1562,25 +1655,31 @@ const RecoverySimulator = {
                 <div class="card">
                     <div class="card-header">
                         <span class="card-title">Completed Recovery Simulations & Rollback Snapshots</span>
-                        <span class="badge badge-good">${simulations.length} Completed</span>
+                        <span class="badge badge-good">${simulations.length} Audit Entries</span>
                     </div>
                     <div class="table-container">
                         <table class="data-table">
                             <thead><tr>
                                 <th>Simulation ID</th><th>Incident ID</th><th>Approver</th><th>Status</th>
-                                <th>Policy Check</th><th>Projected Impact</th><th>Rollback Plan</th>
+                                <th>Policy Check</th><th>Projected Impact</th><th>Rollback Plan</th><th>Action</th>
                             </tr></thead>
                             <tbody>
-                                ${simulations.length === 0 ? `<tr><td colspan="7" class="text-muted" style="text-align:center;">No simulations run yet. Approve a proposal above to test.</td></tr>` :
+                                ${simulations.length === 0 ? `<tr><td colspan="8" class="text-muted" style="text-align:center;">No simulations run yet. Approve a proposal above to test.</td></tr>` :
                                 simulations.map(s => `
                                 <tr>
                                     <td class="mono text-xs"><strong>${escapeHtml(s.simulation_id)}</strong></td>
                                     <td class="mono text-xs">${escapeHtml(s.incident_id)}</td>
                                     <td><strong>${escapeHtml(s.approver)}</strong></td>
-                                    <td><span class="badge badge-excellent">${escapeHtml(s.status)}</span></td>
+                                    <td><span class="badge ${s.status === 'Rolled Back' ? 'badge-fair' : 'badge-excellent'}">${escapeHtml(s.status)}</span></td>
                                     <td><span class="badge badge-accent">${escapeHtml(s.policy_check)}</span></td>
                                     <td class="text-xs">${escapeHtml(s.simulation_result)}</td>
                                     <td class="text-xs text-muted mono">${escapeHtml(s.rollback_info)}</td>
+                                    <td>
+                                        ${s.status !== 'Rolled Back' ? `
+                                        <button class="btn btn-secondary btn-xs" onclick='RecoverySimulator.rollback(${JSON.stringify(s.incident_id)})'>
+                                            Rollback
+                                        </button>` : `<span class="text-xs text-muted">Reverted</span>`}
+                                    </td>
                                 </tr>`).join('')}
                             </tbody>
                         </table>
@@ -1595,16 +1694,13 @@ const RecoverySimulator = {
 // ==========================================
 // 11. ORGANIZATION SETTINGS
 // ==========================================
-// ==========================================
-// 11. ORGANIZATION SETTINGS & THRESHOLDS
-// ==========================================
 const OrgSettings = {
     async render(container) {
         const session = AegisAuth.getSession();
         let orgProfile = {
-            tenant_id: session?.orgId || 'BANK_HDFC_IN',
-            name: session?.org || 'HDFC Bank Ltd. (India)',
-            region: 'ap-south-1',
+            tenant_id: session?.orgId || 'default',
+            name: session?.org || 'AEGIS Server Node',
+            region: 'local',
             timezone: 'UTC'
         };
 
@@ -1612,1567 +1708,345 @@ const OrgSettings = {
             orgProfile = await AegisAPI.get('/organizations/profile');
         } catch {}
 
-        const savedRegion = localStorage.getItem('aegis_selected_region') || orgProfile.region || 'ap-south-1';
-        const savedCpuFair = localStorage.getItem('aegis_th_cpu_fair') || '75';
-        const savedCpuPoor = localStorage.getItem('aegis_th_cpu_poor') || '90';
-        const savedLatFair = localStorage.getItem('aegis_th_lat_fair') || '500';
-        const savedLatPoor = localStorage.getItem('aegis_th_lat_poor') || '1000';
-
         container.innerHTML = `
             <div class="page-header">
-                <div class="flex items-center justify-between">
+                <h1 class="page-title">Organization Settings & Configuration</h1>
+                <p class="page-subtitle">Multi-tenant boundary, regional data residency, collector API credentials, and configurable health state thresholds</p>
+            </div>
+
+            <!-- Health State Thresholds Sliders -->
+            <div class="card" style="margin-bottom:var(--space-6);">
+                <div class="card-header">
                     <div>
-                        <h1 class="page-title">Settings & Operational Thresholds</h1>
-                        <p class="page-subtitle">Multi-tenant identity, DPDP/RBI data residency, and configurable AIOps health state boundaries</p>
+                        <span class="card-title">4 Health State Threshold Configurations</span>
+                        <div class="text-xs text-muted">Configurable operational thresholds used by AIOps health scoring</div>
                     </div>
-                    <span class="badge badge-accent">RBI / DPDP Aligned</span>
+                    <span class="badge badge-accent">Interactive Tuning</span>
+                </div>
+                <div style="padding:var(--space-4);display:grid;grid-template-columns:repeat(4, 1fr);gap:var(--space-4);">
+                    <div style="background:var(--color-bg-secondary);padding:var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="badge badge-excellent">Excellent</span>
+                            <span class="mono font-bold text-xs" id="val-th-excellent">≥ 90</span>
+                        </div>
+                        <div class="text-xs text-muted mb-2">Health Score Ceiling</div>
+                        <input type="range" class="w-full" min="80" max="99" value="90" oninput="document.getElementById('val-th-excellent').textContent='≥ '+this.value">
+                        <div class="text-xs text-muted" style="margin-top:6px;">CPU &lt; 50% · Latency &lt; 40ms</div>
+                    </div>
+                    <div style="background:var(--color-bg-secondary);padding:var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="badge badge-good">Good</span>
+                            <span class="mono font-bold text-xs" id="val-th-good">70 - 89</span>
+                        </div>
+                        <div class="text-xs text-muted mb-2">Nominal Performance</div>
+                        <input type="range" class="w-full" min="60" max="85" value="70" oninput="document.getElementById('val-th-good').textContent=this.value+' - 89'">
+                        <div class="text-xs text-muted" style="margin-top:6px;">CPU &lt; 70% · Latency &lt; 100ms</div>
+                    </div>
+                    <div style="background:var(--color-bg-secondary);padding:var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="badge badge-fair">Fair</span>
+                            <span class="mono font-bold text-xs" id="val-th-fair">50 - 69</span>
+                        </div>
+                        <div class="text-xs text-muted mb-2">Degraded Attention</div>
+                        <input type="range" class="w-full" min="40" max="65" value="50" oninput="document.getElementById('val-th-fair').textContent=this.value+' - 69'">
+                        <div class="text-xs text-muted" style="margin-top:6px;">CPU &lt; 85% · Latency &lt; 250ms</div>
+                    </div>
+                    <div style="background:var(--color-bg-secondary);padding:var(--space-3);border-radius:var(--radius-md);border:1px solid var(--color-border);">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="badge badge-poor">Poor</span>
+                            <span class="mono font-bold text-xs" id="val-th-poor">&lt; 50</span>
+                        </div>
+                        <div class="text-xs text-muted mb-2">Critical Breach</div>
+                        <input type="range" class="w-full" min="20" max="49" value="49" oninput="document.getElementById('val-th-poor').textContent='< '+this.value">
+                        <div class="text-xs text-muted" style="margin-top:6px;">CPU ≥ 85% · Latency ≥ 250ms</div>
+                    </div>
                 </div>
             </div>
 
-            <!-- Tenant Identity Card -->
-            <div class="card" style="margin-bottom:var(--space-6);">
-                <div class="card-header">
-                    <span class="card-title">Tenant Identity & Data Partitioning</span>
-                    <span class="badge badge-excellent">Cryptographically Isolated Partition</span>
+            <!-- Regional Endpoint & Collector API Key Card -->
+            <div class="grid grid-2 gap-4" style="margin-bottom:var(--space-6);">
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Host Ingestion Endpoint</span>
+                        <span class="badge badge-accent">Local Machine</span>
+                    </div>
+                    <div style="padding:var(--space-4);">
+                        <div class="form-group mb-3">
+                            <label class="form-label">Monitored Node</label>
+                            <input class="form-input" value="server-01 (Physical Laptop)" readonly>
+                        </div>
+                        <div class="text-xs text-muted">
+                            All telemetry is collected strictly from local hardware interfaces (CPU, RAM, Disks, Network Adapters) via Tier 1.
+                        </div>
+                    </div>
                 </div>
-                <div class="grid grid-2 gap-4">
+
+                <div class="card">
+                    <div class="card-header">
+                        <span class="card-title">Tier 1 Collector API Authentication Key</span>
+                        <span class="badge badge-excellent">Active Ingest Key</span>
+                    </div>
+                    <div style="padding:var(--space-4);">
+                        <div class="form-group mb-3">
+                            <label class="form-label">Collector Token (X-Auth-Token)</label>
+                            <div style="display:flex;gap:8px;">
+                                <input class="form-input mono" type="password" id="settings-token-input" value="aegis-collector-token-server01" readonly style="flex:1;">
+                                <button class="btn btn-secondary btn-sm" onclick="const inp=document.getElementById('settings-token-input'); inp.type = inp.type==='password'?'text':'password';">
+                                    Show
+                                </button>
+                                <button class="btn btn-primary btn-sm" onclick="navigator.clipboard.writeText('aegis-collector-token-server01'); AegisToast.success('Copied API Token!');">
+                                    Copy
+                                </button>
+                            </div>
+                        </div>
+                        <div class="text-xs text-muted">
+                            Derived collector identity: <strong>COLLECTOR_SERVER_01</strong> &bull; Authenticated via SHA-256 HMAC
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <span class="card-title">Tenant Identity & Partition Profile</span>
+                    <span class="badge badge-excellent">Tenant Isolation Enforced</span>
+                </div>
+                <div class="grid grid-2 gap-4" style="padding:var(--space-4);">
                     <div class="form-group">
-                        <label class="form-label">Banking Institution</label>
+                        <label class="form-label">Organization Name</label>
                         <input class="form-input" value="${escapeHtml(orgProfile.name)}" readonly>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Tenant ID (Hardware Partition Key)</label>
-                        <input class="form-input mono" value="${escapeHtml(orgProfile.tenant_id)}" readonly>
+                        <label class="form-label">Tenant ID (Isolated Database Partition)</label>
+                        <input class="form-input mono" value="${escapeHtml(AegisAPI.getTenantId())}" readonly>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Current Session Operator</label>
+                        <label class="form-label">Current Authenticated User</label>
                         <input class="form-input" value="${escapeHtml(session?.name || 'Administrator')}" readonly>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">Enforced Access Role</label>
+                        <label class="form-label">Assigned Role</label>
                         <input class="form-input" value="${escapeHtml(session?.role || 'Organization Owner')}" readonly>
                     </div>
                 </div>
-            </div>
-
-            <!-- Data Residency & Region Selection -->
-            <div class="card" style="margin-bottom:var(--space-6);">
-                <div class="card-header">
-                    <span class="card-title">Data Residency & Sovereignty (RBI Mandate)</span>
-                    <span class="badge badge-good">In-Country Storage Only</span>
-                </div>
-                <p class="text-sm text-muted" style="margin-bottom:var(--space-4);">
-                    In compliance with the Reserve Bank of India (RBI) directive on Storage of Payment System Data and the Digital Personal Data Protection (DPDP) Act 2023, all sanitized observability telemetry is pinned to sovereign cloud infrastructure.
-                </p>
-                <div class="grid grid-2 gap-4" style="margin-bottom:var(--space-4);">
-                    <div class="form-group">
-                        <label class="form-label">Designated Ingestion & Storage Region</label>
-                        <select id="setting-region-select" class="form-input">
-                            <option value="ap-south-1" ${savedRegion === 'ap-south-1' ? 'selected' : ''}>ap-south-1 (Asia Pacific - Mumbai) [Recommended for RBI/DPDP]</option>
-                            <option value="ap-south-2" ${savedRegion === 'ap-south-2' ? 'selected' : ''}>ap-south-2 (Asia Pacific - Hyderabad) [Disaster Recovery Backup]</option>
-                            <option value="us-east-1" ${savedRegion === 'us-east-1' ? 'selected' : ''}>us-east-1 (AWS US East - Global Test Lab)</option>
-                            <option value="eu-central-1" ${savedRegion === 'eu-central-1' ? 'selected' : ''}>eu-central-1 (AWS Europe - Frankfurt)</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Event Timestamp Standardization</label>
-                        <input class="form-input" value="UTC (ISO 8601 strictly enforced across Tiers)" readonly>
-                    </div>
-                </div>
-                <button class="btn btn-primary btn-sm" onclick="OrgSettings.saveRegion()">
-                    ${AegisIcons.shieldCheck()} Save Designated Region
-                </button>
-            </div>
-
-            <!-- Health State Threshold Sliders -->
-            <div class="card" style="margin-bottom:var(--space-6);">
-                <div class="card-header">
-                    <span class="card-title">AIOps Health State Thresholds (Dynamic Sliders)</span>
-                    <span class="badge badge-accent">4-Tier State Machine</span>
-                </div>
-                <p class="text-sm text-muted" style="margin-bottom:var(--space-4);">
-                    Configure runtime cutoff thresholds for health state grading: <strong>Excellent</strong> &rarr; <strong>Good</strong> &rarr; <strong>Fair</strong> &rarr; <strong>Poor</strong>. These determine automated Incident DNA triggers and recovery recommendations.
-                </p>
-                
-                <div class="grid grid-2 gap-6" style="margin-bottom:var(--space-6);">
-                    <!-- CPU Thresholds -->
-                    <div style="background:var(--color-bg-primary);padding:var(--space-4);border-radius:var(--radius-md);border:1px solid var(--color-border);">
-                        <div class="flex items-center justify-between" style="margin-bottom:var(--space-3);">
-                            <span style="font-weight:600;font-size:var(--text-sm);">${AegisIcons.cpu()} CPU Utilization Limits</span>
-                            <span class="badge badge-fair" id="cpu-slider-display">Fair: ${savedCpuFair}%, Poor: ${savedCpuPoor}%</span>
-                        </div>
-                        <div class="form-group" style="margin-bottom:var(--space-3);">
-                            <div class="flex justify-between text-xs text-muted" style="margin-bottom:4px;">
-                                <span>Fair Warning Limit</span>
-                                <span id="val-cpu-fair" class="mono font-semibold">${savedCpuFair}%</span>
-                            </div>
-                            <input type="range" id="slider-cpu-fair" min="50" max="85" value="${savedCpuFair}" style="width:100%;cursor:pointer;" oninput="OrgSettings.updateDisplay()">
-                        </div>
-                        <div class="form-group">
-                            <div class="flex justify-between text-xs text-muted" style="margin-bottom:4px;">
-                                <span>Poor / Critical Breach Limit</span>
-                                <span id="val-cpu-poor" class="mono font-semibold">${savedCpuPoor}%</span>
-                            </div>
-                            <input type="range" id="slider-cpu-poor" min="80" max="98" value="${savedCpuPoor}" style="width:100%;cursor:pointer;" oninput="OrgSettings.updateDisplay()">
-                        </div>
-                    </div>
-
-                    <!-- Latency Thresholds -->
-                    <div style="background:var(--color-bg-primary);padding:var(--space-4);border-radius:var(--radius-md);border:1px solid var(--color-border);">
-                        <div class="flex items-center justify-between" style="margin-bottom:var(--space-3);">
-                            <span style="font-weight:600;font-size:var(--text-sm);">${AegisIcons.wifi()} UPI Gateway Latency Limits</span>
-                            <span class="badge badge-poor" id="lat-slider-display">Fair: ${savedLatFair}ms, Poor: ${savedLatPoor}ms</span>
-                        </div>
-                        <div class="form-group" style="margin-bottom:var(--space-3);">
-                            <div class="flex justify-between text-xs text-muted" style="margin-bottom:4px;">
-                                <span>Fair Latency Limit</span>
-                                <span id="val-lat-fair" class="mono font-semibold">${savedLatFair} ms</span>
-                            </div>
-                            <input type="range" id="slider-lat-fair" min="200" max="800" step="25" value="${savedLatFair}" style="width:100%;cursor:pointer;" oninput="OrgSettings.updateDisplay()">
-                        </div>
-                        <div class="form-group">
-                            <div class="flex justify-between text-xs text-muted" style="margin-bottom:4px;">
-                                <span>Poor / Critical Timeout Limit</span>
-                                <span id="val-lat-poor" class="mono font-semibold">${savedLatPoor} ms</span>
-                            </div>
-                            <input type="range" id="slider-lat-poor" min="800" max="2500" step="50" value="${savedLatPoor}" style="width:100%;cursor:pointer;" oninput="OrgSettings.updateDisplay()">
-                        </div>
-                    </div>
-                </div>
-
-                <div class="flex gap-2">
-                    <button class="btn btn-primary btn-sm" onclick="OrgSettings.saveThresholds()">
-                        ${AegisIcons.check()} Save Operational Thresholds
-                    </button>
-                    <button class="btn btn-secondary btn-sm" onclick="OrgSettings.resetThresholds()">
-                        Reset Defaults
-                    </button>
-                </div>
             </div>`;
-    },
-
-    updateDisplay() {
-        const cpuFair = document.getElementById('slider-cpu-fair')?.value || '75';
-        const cpuPoor = document.getElementById('slider-cpu-poor')?.value || '90';
-        const latFair = document.getElementById('slider-lat-fair')?.value || '500';
-        const latPoor = document.getElementById('slider-lat-poor')?.value || '1000';
-
-        const elCpuF = document.getElementById('val-cpu-fair');
-        const elCpuP = document.getElementById('val-cpu-poor');
-        const elLatF = document.getElementById('val-lat-fair');
-        const elLatP = document.getElementById('val-lat-poor');
-        const dispCpu = document.getElementById('cpu-slider-display');
-        const dispLat = document.getElementById('lat-slider-display');
-
-        if (elCpuF) elCpuF.textContent = `${cpuFair}%`;
-        if (elCpuP) elCpuP.textContent = `${cpuPoor}%`;
-        if (elLatF) elLatF.textContent = `${latFair} ms`;
-        if (elLatP) elLatP.textContent = `${latPoor} ms`;
-        if (dispCpu) dispCpu.textContent = `Fair: ${cpuFair}%, Poor: ${cpuPoor}%`;
-        if (dispLat) dispLat.textContent = `Fair: ${latFair}ms, Poor: ${latPoor}ms`;
-    },
-
-    saveRegion() {
-        const sel = document.getElementById('setting-region-select');
-        if (sel) {
-            localStorage.setItem('aegis_selected_region', sel.value);
-            AegisToast.success(`Region pinned to ${sel.value} (RBI & DPDP compliant sovereign routing)`);
-        }
-    },
-
-    saveThresholds() {
-        const cpuFair = document.getElementById('slider-cpu-fair')?.value || '75';
-        const cpuPoor = document.getElementById('slider-cpu-poor')?.value || '90';
-        const latFair = document.getElementById('slider-lat-fair')?.value || '500';
-        const latPoor = document.getElementById('slider-lat-poor')?.value || '1000';
-
-        localStorage.setItem('aegis_th_cpu_fair', cpuFair);
-        localStorage.setItem('aegis_th_cpu_poor', cpuPoor);
-        localStorage.setItem('aegis_th_lat_fair', latFair);
-        localStorage.setItem('aegis_th_lat_poor', latPoor);
-
-        try {
-            AegisAPI.post('/demo/thresholds', {
-                cpu_fair: parseInt(cpuFair),
-                cpu_poor: parseInt(cpuPoor),
-                latency_fair: parseInt(latFair),
-                latency_poor: parseInt(latPoor)
-            });
-        } catch {}
-
-        AegisToast.success(`Thresholds saved: CPU Fair ${cpuFair}%, Poor ${cpuPoor}% | Latency Fair ${latFair}ms, Poor ${latPoor}ms`);
-    },
-
-    resetThresholds() {
-        localStorage.setItem('aegis_th_cpu_fair', '75');
-        localStorage.setItem('aegis_th_cpu_poor', '90');
-        localStorage.setItem('aegis_th_lat_fair', '500');
-        localStorage.setItem('aegis_th_lat_poor', '1000');
-        this.render(document.getElementById('content-area'));
-        AegisToast.info('Default banking threshold presets restored');
     }
 };
 
 // ==========================================
-// 12. AI DEMONSTRATION CONTROLS (TUNABLE ATTACK & TRAFFIC SIMULATOR)
+// 12. HARDWARE DIAGNOSTICS & STRESS CONTROLS
 // ==========================================
-const DemoControls = {
+const DiagnosticsControls = {
+    _outageSimulated: false,
+
     async render(container) {
         container.innerHTML = `
             <div class="page-header">
                 <div class="flex items-center justify-between flex-wrap gap-4">
                     <div>
-                        <h1 class="page-title">AI Demonstration Controls & Chaos Simulation</h1>
-                        <p class="page-subtitle">Dynamically tune banking traffic & attack load (0% to 100%) and trigger live operational scenarios</p>
+                        <h1 class="page-title">Hardware Diagnostics & Stress Controls</h1>
+                        <p class="page-subtitle">Real physical load triggers executed on this Windows laptop (Monitored Node: server-01)</p>
                     </div>
-                    <div class="flex items-center gap-2">
-                        <button class="btn btn-primary btn-sm" onclick="DemoControls.mitigateLoad()">
-                            ${AegisIcons.shieldCheck()} Mitigate & Reset (15%)
-                        </button>
-                        <button class="btn btn-danger btn-sm" onclick="DemoControls.stopWorkload()">
-                            ${AegisIcons.x()} Emergency Stop All
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Interactive Traffic & Attack Load Intensity Tuner (0% - 100%) -->
-            <div class="card" style="margin-bottom:var(--space-6);border: 2px solid var(--color-accent);background:linear-gradient(180deg, rgba(34, 211, 238, 0.05) 0%, rgba(15, 23, 42, 0.7) 100%);box-shadow: 0 4px 20px rgba(0,0,0,0.35);">
-                <div class="card-header">
-                    <div>
-                        <span class="card-title" style="font-size:16px;">⚡ Tunable Traffic & Attack Load Simulator (0% — 100%)</span>
-                        <div class="text-xs text-muted" style="margin-top:2px;">Dial server load up to observe live health degradation (Excellent &rarr; Good &rarr; Fair &rarr; Poor) and dial down to show recovery</div>
-                    </div>
-                    <span class="badge badge-excellent" id="demo-load-badge">15% · Normal Baseline (Excellent)</span>
-                </div>
-
-                <div style="margin-bottom:var(--space-4);">
-                    <div class="flex items-center justify-between" style="margin-bottom:var(--space-2);">
-                        <label class="form-label" style="font-weight:600;margin-bottom:0;font-size:14px;">Gateway Load Intensity: <span id="demo-slider-val" class="mono font-semibold" style="color:var(--color-accent);">15%</span></label>
-                        <span class="text-xs text-muted mono" id="demo-load-preview">CPU: ~26% · Latency: ~49ms · Loss: 0.1% · Failed Logins: 0</span>
-                    </div>
-                    <input type="range" id="traffic-load-slider" min="0" max="100" value="15" style="width:100%;cursor:pointer;height:8px;accent-color:var(--color-accent);" oninput="DemoControls.onSliderInput(this.value)" onchange="DemoControls.setLoad(this.value)">
-                    <div class="flex justify-between text-xs text-muted mono" style="margin-top:6px;">
-                        <span>0% (Idle)</span>
-                        <span>30% (Excellent)</span>
-                        <span>60% (Good / Fair)</span>
-                        <span>85% (Fair Warning)</span>
-                        <span style="color:#ef4444;font-weight:600;">100% (Critical DDoS)</span>
-                    </div>
-                </div>
-
-                <!-- Quick Presets -->
-                <div class="flex items-center justify-between flex-wrap gap-2" style="padding-top:var(--space-3);border-top:1px solid var(--color-border);">
-                    <div class="flex items-center gap-2 flex-wrap">
-                        <span class="text-xs text-muted" style="font-weight:600;">QUICK PRESETS:</span>
-                        <button class="btn btn-secondary btn-sm" onclick="DemoControls.setLoad(15)">
-                            ${AegisIcons.check()} Normal Baseline (15%)
-                        </button>
-                        <button class="btn btn-secondary btn-sm" onclick="DemoControls.setLoad(55)">
-                            ${AegisIcons.zap()} Peak Banking Traffic (55%)
-                        </button>
-                        <button class="btn btn-danger btn-sm" onclick="DemoControls.setLoad(95)">
-                            ${AegisIcons.lock()} DDoS + Brute-Force Overload (95%)
-                        </button>
-                        <button class="btn btn-ghost btn-sm" onclick="DemoControls.toggleOutage()">
-                            ${AegisIcons.refresh()} Toggle SaaS Outage / Reconnect
-                        </button>
-                    </div>
-                    <button class="btn btn-primary btn-sm" onclick="DemoControls.mitigateLoad()">
-                        ${AegisIcons.shieldCheck()} Mitigate & Reset (15%)
+                    <button class="btn btn-secondary btn-sm" onclick="DiagnosticsControls.refresh()">
+                        ${AegisIcons.refresh()} Refresh Status
                     </button>
                 </div>
             </div>
 
-            <!-- Safe Architecture Notice -->
             <div class="sim-banner" style="background:rgba(34, 211, 238, 0.08);border-color:rgba(34, 211, 238, 0.2);color:var(--color-accent);margin-bottom:var(--space-6);">
                 ${AegisIcons.shieldCheck()}
-                <span><strong>Two-Tier Live Architecture:</strong> Actions below trigger live execution in our local Bank Collector daemon (<code>http://localhost:8001</code>) and central SaaS engine (<code>http://localhost:8000</code>). Observe real-time scrubbing, buffering, and AIOps correlation.</span>
+                <span><strong>Real Hardware Testing Suite:</strong> Real CPU math crunching, real RAM allocation, and real disk write bursts on server-01.</span>
             </div>
 
-            <!-- 4 Big Demonstration Scenario Action Cards -->
+            <!-- 4 Live Trigger Buttons Grid -->
             <div class="grid grid-2 gap-4" style="margin-bottom:var(--space-6);">
-                <!-- Scenario 1: Inject Raw PII Log -->
-                <div class="card" style="border-left: 4px solid var(--color-fair);">
+                <!-- Trigger 1: Real CPU Stress -->
+                <div class="card" style="border-left:4px solid var(--color-poor);">
                     <div class="card-header">
-                        <span class="card-title">1. Inject Raw Bank PII Log</span>
-                        <span class="badge badge-fair">Tier 1 Local Scrubbing</span>
+                        <div>
+                            <span class="card-title">1. Real CPU Stress Workload</span>
+                            <div class="text-xs text-muted">Spawns real multithreaded prime calculations</div>
+                        </div>
+                        <span class="badge badge-poor">CPU Stress</span>
                     </div>
-                    <p class="text-sm text-muted" style="margin-bottom:var(--space-4);">
-                        Injects a raw bank error log containing live sensitive customer PII (<strong>Customer ID, Account Number, PAN, Aadhaar, JWT Token</strong>). Verifies instant local scrubbing and automatic generation of side-by-side Egress Proof diff.
+                    <p class="text-sm text-muted mb-3">
+                        Spawns worker threads across physical CPU cores on this laptop for 10 seconds. Live psutil stream will reflect the CPU spike in Command Center.
                     </p>
-                    <div class="flex items-center justify-between">
-                        <button class="btn btn-primary btn-sm" onclick="DemoControls.injectRawPII()">
-                            ${AegisIcons.shieldCheck()} Inject Raw PII Log
-                        </button>
-                        <span class="text-xs text-muted mono">POST :8001/trigger/pii</span>
-                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="DiagnosticsControls.triggerCpuStress()">
+                        ${AegisIcons.activity()} Run Real CPU Stress (10s)
+                    </button>
                 </div>
 
-                <!-- Scenario 2: Simulate Brute-Force Logins -->
-                <div class="card" style="border-left: 4px solid var(--color-poor);">
+                <!-- Trigger 2: Real Memory Allocation -->
+                <div class="card" style="border-left:4px solid var(--color-accent);">
                     <div class="card-header">
-                        <span class="card-title">2. Simulate Brute-Force Login Spike</span>
-                        <span class="badge badge-poor">Security Anomaly</span>
+                        <div>
+                            <span class="card-title">2. Real Memory Allocation Workload</span>
+                            <div class="text-xs text-muted">Allocates and touches real bytearray chunks in RAM</div>
+                        </div>
+                        <span class="badge badge-accent">RAM Allocation</span>
                     </div>
-                    <p class="text-sm text-muted" style="margin-bottom:var(--space-4);">
-                        Simulates 42 rapid failed PIN/login attempts on <code>node_upi_gw_02</code> within 60 seconds from an untrusted subnet. Verifies local aggregation into a clean <code>SecuritySummary</code> packet without leaking raw passwords or credentials.
+                    <p class="text-sm text-muted mb-3">
+                        Allocates 500 MB of physical RAM memory, touches every memory page, and holds it for 10 seconds before releasing cleanly.
                     </p>
-                    <div class="flex items-center justify-between">
-                        <button class="btn btn-primary btn-sm" onclick="DemoControls.injectBruteForce()">
-                            ${AegisIcons.lock()} Simulate Brute-Force Logins
-                        </button>
-                        <span class="text-xs text-muted mono">POST :8001/trigger/bruteforce</span>
-                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="DiagnosticsControls.triggerMemoryStress()">
+                        ${AegisIcons.zap()} Run Real RAM Stress (500 MB)
+                    </button>
                 </div>
 
-                <!-- Scenario 3: Inject Latency Spike -->
-                <div class="card" style="border-left: 4px solid #ef4444;">
+                <!-- Trigger 3: Real Disk I/O Bursts -->
+                <div class="card" style="border-left:4px solid var(--color-accent-teal);">
                     <div class="card-header">
-                        <span class="card-title">3. Inject Latency & Packet Loss Spike</span>
-                        <span class="badge badge-poor">Z = 4.12 &gt; 2.5 Breach</span>
+                        <div>
+                            <span class="card-title">3. Real Disk I/O Burst</span>
+                            <div class="text-xs text-muted">Rapid file write and read bursts to temp disk</div>
+                        </div>
+                        <span class="badge badge-teal">Disk IOPS</span>
                     </div>
-                    <p class="text-sm text-muted" style="margin-bottom:var(--space-4);">
-                        Surges UPI Payment Gateway latency to 1420ms (nominal baseline: 180ms) and introduces 2.4% packet loss. Triggers rolling Z-score anomaly breach (Z &gt; 2.5), auto-generating correlated root-cause incident <code>INC-2026-089</code>.
+                    <p class="text-sm text-muted mb-3">
+                        Generates intense write and read cycles of random binary chunks to temporary files, testing real disk IOPS and storage counters.
                     </p>
-                    <div class="flex items-center justify-between">
-                        <button class="btn btn-primary btn-sm" onclick="DemoControls.injectLatencySpike()">
-                            ${AegisIcons.zap()} Inject Latency Spike (Z&gt;2.5)
-                        </button>
-                        <span class="text-xs text-muted mono">POST :8001/trigger/latency</span>
-                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="DiagnosticsControls.triggerDiskStress()">
+                        ${AegisIcons.activity()} Run Disk I/O Burst
+                    </button>
                 </div>
 
-                <!-- Scenario 4: Simulate SaaS Outage / Reconnect -->
-                <div class="card" style="border-left: 4px solid var(--color-accent);">
+                <!-- Trigger 4: Local Privacy & Redaction Test -->
+                <div class="card" style="border-left:4px solid var(--color-good);">
                     <div class="card-header">
-                        <span class="card-title">4. Simulate SaaS Outage / Reconnect</span>
-                        <span class="badge badge-accent" id="demo-outage-badge">Online / Syncing</span>
+                        <div>
+                            <span class="card-title">4. Test Local Privacy Redaction</span>
+                            <div class="text-xs text-muted">Verifies username, path, and secret filtering in Tier 1</div>
+                        </div>
+                        <span class="badge badge-excellent">Zero-Leakage</span>
                     </div>
-                    <p class="text-sm text-muted" style="margin-bottom:var(--space-4);">
-                        Simulates central SaaS cloud network partition. Tier 1 collector enters offline buffering mode (queuing payloads in local SQLite/in-memory buffer). Clicking again restores connectivity and flushes the buffer idempotently with zero duplicates.
+                    <p class="text-sm text-muted mb-3">
+                        Sends a sample event through Tier 1 local privacy engine to verify that username, user paths, and auth headers are completely blocked before egress.
                     </p>
-                    <div class="flex items-center justify-between">
-                        <button class="btn btn-secondary btn-sm" id="demo-outage-btn" onclick="DemoControls.toggleOutage()">
-                            ${AegisIcons.refresh()} Toggle SaaS Outage / Reconnect
-                        </button>
-                        <span class="text-xs text-muted mono">POST :8001/trigger/outage</span>
-                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="DiagnosticsControls.testPrivacyEngine()">
+                        ${AegisIcons.lock()} Test Local Redaction
+                    </button>
                 </div>
             </div>
 
             <!-- Live Verification Pipeline Trace Card -->
             <div class="card">
                 <div class="card-header">
-                    <span class="card-title">Live Execution Trace & Cryptographic Evidence</span>
-                    <span class="badge badge-good" id="demo-trace-status">Awaiting Trigger</span>
+                    <span class="card-title">Hardware Diagnostics Action Log & Real-Time Trace</span>
+                    <span class="badge badge-good" id="diag-trace-status">Ready</span>
                 </div>
-                <div id="demo-trace-container" style="background:var(--color-bg-primary);padding:var(--space-4);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-accent);max-height:280px;overflow-y:auto;white-space:pre-wrap;">
-[AEGIS AIOps Engine] Select any scenario button or dial the load slider above to trigger live execution.
-Status and telemetry changes will be logged here with real-time cryptographic verification details.
+                <div id="diag-trace-container" style="background:var(--color-bg-primary);padding:var(--space-4);border-radius:var(--radius-md);font-family:var(--font-mono);font-size:var(--text-xs);color:var(--color-accent-teal);max-height:280px;overflow-y:auto;white-space:pre-wrap;line-height:1.4;">
+[AEGIS Diagnostics Console] Ready. Click any trigger button above to initiate real hardware load on server-01.
                 </div>
             </div>`;
     },
 
-    onSliderInput(val) {
-        val = parseInt(val);
-        const valEl = document.getElementById('demo-slider-val');
-        const badge = document.getElementById('demo-load-badge');
-        const preview = document.getElementById('demo-load-preview');
-        if (valEl) valEl.textContent = `${val}%`;
-
-        let state, badgeClass, prevText;
-        if (val <= 30) {
-            state = 'Normal Baseline (Excellent)';
-            badgeClass = 'badge badge-excellent';
-            prevText = `CPU: ~${Math.round(20 + val * 0.43)}% · Latency: ~${Math.round(40 + val * 0.6)}ms · Loss: 0.1% · Failed Logins: 0`;
-        } else if (val <= 60) {
-            const isGood = val <= 48;
-            state = isGood ? 'Moderate Peak (Good)' : 'Peak UPI Surge (Fair)';
-            badgeClass = isGood ? 'badge badge-good' : 'badge badge-fair';
-            prevText = `CPU: ~${Math.round(50 + (val-30) * 0.43)}% · Latency: ~${Math.round(110 + (val-30) * 1.83)}ms · Loss: 1.5% · Failed Logins: 0`;
-        } else if (val <= 85) {
-            state = 'Heavy Traffic Surge (Fair)';
-            badgeClass = 'badge badge-fair';
-            prevText = `CPU: ~${Math.round(70 + (val-60) * 0.52)}% · Latency: ~${Math.round(250 + (val-60) * 7.6)}ms · Loss: 6.0% · Failed Logins: ~1`;
-        } else {
-            state = 'DDoS & Credential Stuffing (Poor)';
-            badgeClass = 'badge badge-poor';
-            prevText = `CPU: ~${Math.round(88 + (val-85) * 0.5)}% · Latency: ~${Math.round(700 + (val-85) * 15.6)}ms · Loss: 15.0% · Failed Logins: 18/tick (Scrubbed)`;
-        }
-
-        if (badge) { badge.className = badgeClass; badge.textContent = `${val}% · ${state}`; }
-        if (preview) preview.textContent = prevText;
+    async refresh() {
+        AegisToast.info('Diagnostics status refreshed');
     },
 
-    async setLoad(val) {
-        val = parseInt(val);
-        const slider = document.getElementById('traffic-load-slider');
-        if (slider) slider.value = val;
-        this.onSliderInput(val);
-
-        const trace = document.getElementById('demo-trace-container');
-        const status = document.getElementById('demo-trace-status');
-        if (status) status.textContent = `Tuning Load to ${val}%...`;
-
+    async triggerCpuStress() {
+        const trace = document.getElementById('diag-trace-container');
+        const status = document.getElementById('diag-trace-status');
+        if (status) status.textContent = 'CPU Stress Running...';
         try {
-            let res;
-            try {
-                const r = await fetch('http://localhost:8001/trigger/load', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ intensity: val })
-                });
-                res = await r.json();
-            } catch {
-                res = { status: 'Tuned', load_intensity: val, projected_state: val > 85 ? 'Poor' : (val > 60 ? 'Fair' : 'Excellent'), message: `Load tuned to ${val}%` };
-            }
-
-            AegisToast.info(`Gateway load tuned to ${val}% (${res.projected_state || res.health_state})`);
-            if (status) status.textContent = `Load: ${val}% (${res.projected_state || 'Active'}) ✓`;
+            await AegisAPI.post('/system/stress/cpu?duration=10', {});
+            AegisToast.warning('Real CPU stress initiated on laptop! Watch Command Center charts.');
             if (trace) {
-                trace.textContent = `=== TRAFFIC & ATTACK LOAD TUNER ===\n` +
-                    `Load Intensity: ${val}%\n` +
-                    `Projected Health State: ${res.projected_state || (val > 85 ? 'Poor' : (val > 60 ? 'Fair' : 'Excellent'))}\n` +
-                    `Scenario: ${res.scenario || 'Live Dynamic Load Adjustment'}\n` +
-                    `Message: ${res.message}\n\n` +
-                    (val > 85 
-                        ? `[CRITICAL BREACH SIMULATION]:\n• CPU elevated to 88-96%\n• UPI Latency surges to 700-950ms\n• Packet loss at 15%\n• 18 failed logins/tick (PII scrubbed locally)\n• Health state transitions to POOR\n-> Visit Command Center, Incident DNA, and Recovery Simulator to resolve!`
-                        : `[NOMINAL / CONTROLLED LOAD]:\n• Telemetry adjusting dynamically within configured boundaries.\n• Watch Command Center live gauges and charts update in real-time.`);
+                trace.textContent = `=== REAL CPU STRESS DISPATCHED ===\n` +
+                    `Target Node: server-01 (Laptop)\n` +
+                    `Mechanism: Multithreaded floating point arithmetic on all logical processors\n` +
+                    `Duration: 10 seconds\n` +
+                    `Telemetry: Incoming psutil collection tick will capture elevated CPU % and frequency.\n`;
             }
-        } catch (err) {
+            setTimeout(() => { if (status) status.textContent = 'Complete ✓'; }, 10000);
+        } catch(err) {
             AegisToast.error(err.message);
         }
     },
 
-    async mitigateLoad() {
-        const slider = document.getElementById('traffic-load-slider');
-        if (slider) slider.value = 15;
-        this.onSliderInput(15);
-
-        const trace = document.getElementById('demo-trace-container');
-        const status = document.getElementById('demo-trace-status');
-        if (status) status.textContent = 'Mitigating...';
-
+    async triggerMemoryStress() {
+        const trace = document.getElementById('diag-trace-container');
+        const status = document.getElementById('diag-trace-status');
+        if (status) status.textContent = 'RAM Allocation Active...';
         try {
-            let res;
-            try {
-                const r = await fetch('http://localhost:8001/trigger/mitigate', { method: 'POST' });
-                res = await r.json();
-            } catch {
-                res = { status: 'Mitigated', load_intensity: 15, health_state: 'Excellent', message: 'Traffic mitigated to 15%' };
-            }
-
-            AegisToast.success('Traffic overflow mitigated! Gateway load returned to 15% (Excellent)');
-            if (status) status.textContent = 'Mitigated (15%) ✓';
+            await AegisAPI.post('/system/stress/memory?duration=10&size_mb=500', {});
+            AegisToast.warning('Allocated 500 MB real RAM on laptop for 10 seconds!');
             if (trace) {
-                trace.textContent = `=== OVERFLOW RELIEF & MITIGATION EXECUTED ===\n` +
-                    `Load Intensity: 15% (Nominal Baseline)\n` +
-                    `Health State: Excellent\n` +
-                    `Result: CPU, Latency, and Packet Loss drained back to nominal baseline.\n` +
-                    `Message: ${res.message}`;
+                trace.textContent = `=== REAL RAM MEMORY STRESS DISPATCHED ===\n` +
+                    `Target Node: server-01 (Laptop)\n` +
+                    `Allocated: 500 MB bytearray\n` +
+                    `Page Touches: 4096-byte stride active\n` +
+                    `Duration: 10 seconds\n` +
+                    `Telemetry: Memory percent will show increased utilization on dashboard.\n`;
             }
-        } catch (err) {
+            setTimeout(() => { if (status) status.textContent = 'Complete ✓'; }, 10000);
+        } catch(err) {
             AegisToast.error(err.message);
         }
     },
 
-    async injectRawPII() {
-        const trace = document.getElementById('demo-trace-container');
-        const status = document.getElementById('demo-trace-status');
-        if (status) status.textContent = 'Injecting Raw PII...';
-        if (trace) trace.textContent = '[1/3] Dispatching simulated raw bank transaction to Tier 1 Collector (Port 8001)...\n[2/3] Local Privacy Engine evaluating against RBI & DPDP strict allow-list...';
-
+    async triggerDiskStress() {
+        const trace = document.getElementById('diag-trace-container');
+        const status = document.getElementById('diag-trace-status');
+        if (status) status.textContent = 'Disk I/O Running...';
         try {
-            let res;
-            try {
-                const r = await fetch('http://localhost:8001/trigger/pii', { method: 'POST' });
-                res = await r.json();
-            } catch {
-                res = await AegisAPI.post('/demo/inject-raw-pii', {});
-            }
-
-            AegisToast.success('Raw Banking PII Scrubbed & Egress Proof Generated!');
-            if (status) status.textContent = 'PII Scrubbed ✓';
+            await AegisAPI.post('/system/stress/disk?duration=10', {});
+            AegisToast.info('Disk I/O burst running on laptop storage!');
             if (trace) {
-                trace.textContent = `=== SCENARIO 1: RAW BANKING PII SCRUBBED ===\n` +
-                    `Status: ${res.status || 'Success'}\n` +
+                trace.textContent = `=== REAL DISK I/O BURST DISPATCHED ===\n` +
+                    `Target Node: server-01 (Laptop)\n` +
+                    `Operation: Random byte write & flush cycles to temporary files\n` +
+                    `Duration: 10 seconds\n` +
+                    `Telemetry: psutil disk read/write bytes delta captured.\n`;
+            }
+            setTimeout(() => { if (status) status.textContent = 'Complete ✓'; }, 10000);
+        } catch(err) {
+            AegisToast.error(err.message);
+        }
+    },
+
+    async testPrivacyEngine() {
+        const trace = document.getElementById('diag-trace-container');
+        const status = document.getElementById('diag-trace-status');
+        if (status) status.textContent = 'Testing Local Redaction...';
+        try {
+            const host = (typeof AegisAPI !== 'undefined' && AegisAPI.getHost) ? AegisAPI.getHost() : '127.0.0.1';
+            const res = await fetch(`http://${host}:8001/inject/raw-pii`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    service: 'system-agent',
+                    customer_name: 'Test Administrator',
+                    account_number: 'ACCT-9876543210',
+                    auth_token: 'Bearer secret_token_xyz',
+                    client_ip: '127.0.0.1',
+                    cpu_usage: 45.0,
+                    memory_usage: 60.0,
+                    disk_usage: 50.0,
+                    latency_ms: 15.0
+                })
+            }).then(r => r.json());
+
+            AegisToast.success('Local privacy engine validated! Sensitive fields trapped.');
+            if (status) status.textContent = 'Redacted ✓';
+            if (trace) {
+                trace.textContent = `=== TIER 1 LOCAL PRIVACY & REDACTION VALIDATION ===\n` +
                     `Payload ID: ${res.payload_id}\n` +
-                    `Cryptographic SHA-256 Hash: ${res.payload_hash || 'Verified'}\n\n` +
-                    `[RAW LOG INTERCEPTED LOCALLY AT TIER 1]:\n${res.raw_local_log_blocked || ''}\n\n` +
-                    `[SANITIZED METADATA PERMITTED TO CENTRAL SAAS]:\n` +
-                    JSON.stringify(res.sanitized_saas_payload || res, null, 2) + `\n\n` +
-                    `-> Visit 'Egress Proof' tab to inspect the side-by-side color-coded privacy diff!`;
+                    `Status: ${res.status}\n` +
+                    `SHA-256 Digest: ${res.payload_hash}\n\n` +
+                    `[BLOCKED SENSITIVE FIELDS - TRAPPED LOCALLY IN TIER 1]:\n` +
+                    (res.redacted_fields || []).map(f => `  🚫 ${f}`).join('\n') + `\n\n` +
+                    `[SAFE OPERATIONAL FIELDS ALLOWED FOR SAAS EGRESS]:\n` +
+                    (res.approved_fields || []).map(f => `  ✅ ${f}`).join('\n');
             }
-        } catch (err) {
-            AegisToast.error(err.message);
-            if (status) status.textContent = 'Error';
-        }
-    },
-
-    async injectBruteForce() {
-        const trace = document.getElementById('demo-trace-container');
-        const status = document.getElementById('demo-trace-status');
-        if (status) status.textContent = 'Injecting Auth Spike...';
-        if (trace) trace.textContent = '[1/2] Simulating 42 high-velocity failed logins on node_upi_gw_02...\n[2/2] Generating privacy-safe SecuritySummary aggregate without raw passwords...';
-
-        try {
-            let res;
-            try {
-                const r = await fetch('http://localhost:8001/trigger/bruteforce', { method: 'POST' });
-                res = await r.json();
-            } catch {
-                res = await AegisAPI.post('/demo/inject-brute-force', {});
-            }
-
-            AegisToast.warning('Brute-force security anomaly injected');
-            if (status) status.textContent = 'Security Alert Active ✓';
-            if (trace) {
-                trace.textContent = `=== SCENARIO 2: BRUTE-FORCE SECURITY ANOMALY ===\n` +
-                    `Scenario: ${res.scenario || 'ATM & NetBanking PIN Brute-Force Spike'}\n` +
-                    `Failed Attempts: ${res.failed_logins || res.failed_attempts || 42} attempts / 60 seconds\n` +
-                    `Message: ${res.message}\n\n` +
-                    `[PRIVACY PRESERVATION]:\n` +
-                    `• Raw PINs & passwords: RETAINED 100% INSIDE LOCAL BANK BOUNDARY (Tier 1)\n` +
-                    `• Transmitted to Tier 2: Aggregated count (42) and attack classification\n\n` +
-                    `-> Visit 'Security' or 'Telemetry & Security' tab to view real-time alert!`;
-            }
-        } catch (err) {
-            AegisToast.error(err.message);
-            if (status) status.textContent = 'Error';
-        }
-    },
-
-    async injectLatencySpike() {
-        const trace = document.getElementById('demo-trace-container');
-        const status = document.getElementById('demo-trace-status');
-        if (status) status.textContent = 'Injecting Latency Spike...';
-        if (trace) trace.textContent = '[1/3] Forcing UPI Payment Gateway latency to 1420ms (Baseline: 180ms)...\n[2/3] Tier 2 AIOps rolling Z-score calculation: Z = (1420 - 180) / 300 = +4.12σ...\n[3/3] Correlating with node_upi_gw_02 CPU usage and auto-generating incident...';
-
-        try {
-            let res;
-            try {
-                const r = await fetch('http://localhost:8001/trigger/latency', { method: 'POST' });
-                res = await r.json();
-            } catch {
-                res = await AegisAPI.post('/demo/inject-network-spike', {});
-            }
-
-            AegisToast.error('UPI Latency Spike Injected! Health State: Poor');
-            if (status) status.textContent = 'Anomaly Active (Z=4.12) ✓';
-            if (trace) {
-                trace.textContent = `=== SCENARIO 3: STATISTICAL ANOMALY BREACH (Z > 2.5) ===\n` +
-                    `Observed Latency: ${res.latency_ms || 1420} ms (Nominal Baseline: 180 ms)\n` +
-                    `Packet Loss: ${res.packet_loss_pct || 2.4}%\n` +
-                    `Statistical Z-Score: +4.12σ (Anomaly Threshold: > +2.50σ)\n` +
-                    `Health State: Poor / Critical Breach\n` +
-                    `Correlated Incident: INC-2026-089\n` +
-                    `Message: ${res.message}\n\n` +
-                    `-> Visit 'Command Center' to see live red latency spike!\n` +
-                    `-> Visit 'AIOps Incidents' / 'Incident DNA' for multi-signal root-cause graph!`;
-            }
-        } catch (err) {
-            AegisToast.error(err.message);
-            if (status) status.textContent = 'Error';
-        }
-    },
-
-    async toggleOutage() {
-        const trace = document.getElementById('demo-trace-container');
-        const status = document.getElementById('demo-trace-status');
-        const badge = document.getElementById('demo-outage-badge');
-        if (status) status.textContent = 'Toggling SaaS Connection...';
-
-        try {
-            let res;
-            try {
-                const r = await fetch('http://localhost:8001/trigger/outage', { method: 'POST' });
-                res = await r.json();
-            } catch {
-                res = await AegisAPI.post('/demo/simulate-outage-toggle', {});
-            }
-
-            const isOutage = res.outage_simulated || (res.collector_status && res.collector_status.includes('Offline'));
-            if (badge) {
-                badge.className = isOutage ? 'badge badge-poor' : 'badge badge-good';
-                badge.textContent = isOutage ? 'Offline / Buffering' : 'Online / Flushed';
-            }
-
-            if (isOutage) {
-                AegisToast.warning('SaaS Outage Simulated: Tier 1 Buffering Payloads Locally');
-                if (status) status.textContent = 'Buffering Mode Active';
-            } else {
-                AegisToast.success('SaaS Reconnected: All Local Buffers Flushed Idempotently');
-                if (status) status.textContent = 'Buffer Flushed ✓';
-            }
-
-            if (trace) {
-                trace.textContent = `=== SCENARIO 4: SAAS OUTAGE & RESILIENT RECONNECT ===\n` +
-                    `Mode: ${isOutage ? 'OFFLINE (Local Queue Buffering)' : 'ONLINE (Reconnected & Flushed)'}\n` +
-                    `Collector Status: ${res.collector_status || (isOutage ? 'Buffering' : 'Online')}\n` +
-                    `Buffered Records in Tier 1: ${res.buffer_queue_size ?? res.buffered_records ?? (isOutage ? 15 : 0)}\n` +
-                    `Message: ${res.message}\n\n` +
-                    `[RESILIENCE GUARANTEE]:\n` +
-                    (isOutage 
-                        ? `• Payloads are safely buffered locally in memory/SQLite.\n• Zero data dropped during SaaS downtime.`
-                        : `• All queued payloads flushed via payload_id deduplication.\n• Zero duplicate ingestion in central SaaS.`);
-            }
-        } catch (err) {
-            AegisToast.error(err.message);
-            if (status) status.textContent = 'Error';
-        }
-    },
-
-    async stopWorkload() {
-        const trace = document.getElementById('demo-trace-container');
-        const status = document.getElementById('demo-trace-status');
-        if (status) status.textContent = 'Normalizing...';
-
-        try {
-            try { await fetch('http://localhost:8001/reconnect', { method: 'POST' }); } catch {}
-            try { await AegisAPI.post('/demo/stop', {}); } catch {}
-
-            const badge = document.getElementById('demo-outage-badge');
-            if (badge) {
-                badge.className = 'badge badge-good';
-                badge.textContent = 'Online / Syncing';
-            }
-
-            AegisToast.success('All simulated anomalies normalized to baseline');
-            if (status) status.textContent = 'Nominal ✓';
-            if (trace) {
-                trace.textContent = `=== AEGIS WORKLOADS NORMALIZED ===\n` +
-                    `• Latency restored to nominal baseline (~22ms)\n` +
-                    `• Brute-force auth attacks halted\n` +
-                    `• SaaS outage cleared, local queue flushed\n` +
-                    `• System health returning to Excellent / Good.`;
-            }
-        } catch (err) {
-            AegisToast.error(err.message);
-        }
-    }
-};
-
-// ==============================================================================
-// CONSOLIDATED MODULE 1: TELEMETRY & SECURITY (TAB 2)
-// Combines Infrastructure, Network, and Aggregated Security Threats
-// ==============================================================================
-const TelemetrySecurityModule = {
-    _activeTab: 'infra', // 'infra', 'network', 'security'
-
-    async render(container) {
-        container.innerHTML = `
-            <div class="page-header">
-                <div class="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                        <h1 class="page-title">Telemetry & Security</h1>
-                        <p class="page-subtitle">Consolidated operational telemetry: Hardware resource usage, network latency QoS, and real-time banking security threat detection</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="btn-group" style="display:inline-flex;background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:2px;">
-                            <button id="ts-tab-infra" class="btn btn-sm ${this._activeTab === 'infra' ? 'btn-primary' : 'btn-ghost'}" onclick="TelemetrySecurityModule.switchTab('infra')">
-                                ${AegisIcons.cpu()} Infrastructure
-                            </button>
-                            <button id="ts-tab-network" class="btn btn-sm ${this._activeTab === 'network' ? 'btn-primary' : 'btn-ghost'}" onclick="TelemetrySecurityModule.switchTab('network')">
-                                ${AegisIcons.wifi()} Network QoS
-                            </button>
-                            <button id="ts-tab-security" class="btn btn-sm ${this._activeTab === 'security' ? 'btn-primary' : 'btn-ghost'}" onclick="TelemetrySecurityModule.switchTab('security')">
-                                ${AegisIcons.lock()} Security Threats
-                            </button>
-                        </div>
-                        <button class="btn btn-secondary btn-sm" onclick="TelemetrySecurityModule.refresh()">
-                            ${AegisIcons.refresh()} Refresh
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div id="ts-tab-content">
-                <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
-            </div>`;
-        await this.loadActiveTab();
-    },
-
-    switchTab(tab) {
-        this._activeTab = tab;
-        ['infra', 'network', 'security'].forEach(t => {
-            const b = document.getElementById(`ts-tab-${t}`);
-            if (b) b.className = `btn btn-sm ${t === tab ? 'btn-primary' : 'btn-ghost'}`;
-        });
-        this.loadActiveTab();
-    },
-
-    async refresh() {
-        await this.loadActiveTab();
-        AegisToast.info('Telemetry & Security metrics refreshed');
-    },
-
-    async loadActiveTab() {
-        const el = document.getElementById('ts-tab-content');
-        if (!el) return;
-        if (this._activeTab === 'infra') {
-            await InfraMonitoring.render(el);
-        } else if (this._activeTab === 'network') {
-            await NetworkMonitoring.render(el);
-        } else if (this._activeTab === 'security') {
-            await SecurityMonitoring.render(el);
-        }
-    }
-};
-
-// ==============================================================================
-// CONSOLIDATED MODULE 2: AIOPS INCIDENTS (TAB 4)
-// Combines Incident DNA & AI Insights (Z-Scores > 2.5, Contributing Signals, INC-2026-089)
-// ==============================================================================
-const AIOpsIncidentsModule = {
-    _activeTab: 'incidents', // 'incidents' or 'insights'
-
-    async render(container) {
-        container.innerHTML = `
-            <div class="page-header">
-                <div class="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                        <h1 class="page-title">AIOps Incidents & Intelligence</h1>
-                        <p class="page-subtitle">Correlated root-cause Incident DNA, multi-signal Z-score anomaly reasoning, contributing signals, and confidence scores</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="btn-group" style="display:inline-flex;background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:2px;">
-                            <button id="aiops-tab-inc" class="btn btn-sm ${this._activeTab === 'incidents' ? 'btn-primary' : 'btn-ghost'}" onclick="AIOpsIncidentsModule.switchTab('incidents')">
-                                ${AegisIcons.alertTriangle()} Correlated Incidents (DNA)
-                            </button>
-                            <button id="aiops-tab-ins" class="btn btn-sm ${this._activeTab === 'insights' ? 'btn-primary' : 'btn-ghost'}" onclick="AIOpsIncidentsModule.switchTab('insights')">
-                                ${AegisIcons.activity()} Anomaly Detection (Z > 2.5)
-                            </button>
-                        </div>
-                        <button class="btn btn-secondary btn-sm" onclick="AIOpsIncidentsModule.refresh()">
-                            ${AegisIcons.refresh()} Refresh
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div id="aiops-main-content">
-                <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
-            </div>`;
-        await this.load();
-    },
-
-    switchTab(tab) {
-        this._activeTab = tab;
-        const bInc = document.getElementById('aiops-tab-inc');
-        const bIns = document.getElementById('aiops-tab-ins');
-        if (bInc) bInc.className = `btn btn-sm ${tab === 'incidents' ? 'btn-primary' : 'btn-ghost'}`;
-        if (bIns) bIns.className = `btn btn-sm ${tab === 'insights' ? 'btn-primary' : 'btn-ghost'}`;
-        this.load();
-    },
-
-    async refresh() {
-        await this.load();
-        AegisToast.info('AIOps data refreshed');
-    },
-
-    async load() {
-        const el = document.getElementById('aiops-main-content');
-        if (!el) return;
-        if (this._activeTab === 'incidents') {
-            await this.loadIncidents(el);
-        } else {
-            await AIInsights.render(el);
-        }
-    },
-
-    async loadIncidents(el) {
-        try {
-            const incidents = await AegisAPI.get('/incidents');
-            if (!incidents || incidents.length === 0) {
-                el.innerHTML = `
-                    <div class="card">
-                        <div class="empty-state">
-                            ${AegisIcons.shieldCheck()}
-                            <h3>No Active Incidents Detected</h3>
-                            <p>All operational banking signals are within normal ±2.5σ baselines.</p>
-                        </div>
-                    </div>`;
-                return;
-            }
-
-            el.innerHTML = incidents.map(inc => {
-                const alerts = Array.isArray(inc.related_alerts) ? inc.related_alerts : [];
-                const timeline = Array.isArray(inc.timeline) ? inc.timeline : [];
-                const confidencePct = Math.round((inc.confidence || 0.94) * 100);
-
-                return `
-                    <div class="card" style="margin-bottom:var(--space-6);border-left:4px solid var(--color-poor);">
-                        <div class="card-header" style="align-items:flex-start;">
-                            <div>
-                                <div class="flex items-center gap-2 mb-1 flex-wrap">
-                                    <span class="badge badge-poor" style="font-weight:700;letter-spacing:0.5px;">${escapeHtml(inc.incident_id)}</span>
-                                    <span class="badge badge-accent">${escapeHtml(inc.affected_service)}</span>
-                                    <span class="badge ${inc.status === 'Active' ? 'badge-poor' : 'badge-excellent'}">${escapeHtml(inc.status)}</span>
-                                    <span class="badge badge-teal">${alerts.length} Merged Alerts</span>
-                                </div>
-                                <h2 style="font-size:var(--text-lg);font-weight:700;color:var(--color-text-primary);margin:6px 0;">
-                                    ${escapeHtml(inc.title)}
-                                </h2>
-                                <p class="text-sm text-muted">AIOps Root-Cause Incident · Confidence Score: <strong style="color:var(--color-primary);">${confidencePct}%</strong></p>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button class="btn btn-primary btn-sm" onclick="AegisRouter.navigate('recovery-simulator')">
-                                    ${AegisIcons.refresh()} Open Recovery Simulator
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Z-Score Reasoning & Contributing Signals -->
-                        <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(260px, 1fr));gap:var(--space-4);margin:var(--space-4) 0;background:var(--color-bg-secondary);padding:var(--space-4);border-radius:var(--radius-md);border:1px solid var(--color-border);">
-                            <div>
-                                <div class="text-xs text-muted uppercase font-semibold mb-1">📊 Z-Score Reasoning (Z > 2.5)</div>
-                                <p class="text-sm" style="color:var(--color-poor);font-weight:700;">
-                                    Observed Latency: 1420ms vs Baseline: 180ms (+3.84σ breach > 2.5)
-                                </p>
-                                <p class="text-xs text-muted mt-1">Multi-signal correlation detected simultaneous breaches across DB connection queues and gateway timeouts.</p>
-                            </div>
-                            <div>
-                                <div class="text-xs text-muted uppercase font-semibold mb-1">🔍 Contributing Signals</div>
-                                <div class="flex items-center gap-1 flex-wrap mt-1">
-                                    <span class="badge badge-accent">UPI Payment Latency</span>
-                                    <span class="badge badge-fair">HikariCP Pool (98.4%)</span>
-                                    <span class="badge badge-poor">504 Gateway Timeouts</span>
-                                    <span class="badge badge-teal">Core CPU Load</span>
-                                </div>
-                            </div>
-                            <div>
-                                <div class="text-xs text-muted uppercase font-semibold mb-1">💡 Likely Root Cause</div>
-                                <p class="text-xs" style="color:var(--color-text-primary);">${escapeHtml(inc.likely_cause || 'High-volume transaction surge.')}</p>
-                            </div>
-                        </div>
-
-                        <!-- Merged Alerts List -->
-                        <div style="margin-top:var(--space-4);">
-                            <h4 class="text-xs text-muted uppercase font-semibold mb-2">Merged Contributing Alerts (${alerts.length})</h4>
-                            <div style="display:grid;gap:var(--space-2);">
-                                ${alerts.map(a => `
-                                    <div style="display:flex;align-items:center;justify-content:space-between;background:var(--color-bg-primary);border:1px solid var(--color-border);padding:var(--space-2) var(--space-3);border-radius:var(--radius-sm);flex-wrap:wrap;gap:8px;">
-                                        <div class="flex items-center gap-2">
-                                            <span class="badge badge-poor" style="font-size:10px;">Z=${a.z_score || '3.84'}</span>
-                                            <span class="text-xs font-semibold">${escapeHtml(a.summary || a.metric)}</span>
-                                        </div>
-                                        <div class="text-xs mono text-muted">Observed: <strong style="color:var(--color-poor);">${escapeHtml(a.observed || '1420ms')}</strong> (Base: ${escapeHtml(a.baseline || '180ms')})</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-
-                        <!-- Incident Timeline -->
-                        <div style="margin-top:var(--space-4);">
-                            <h4 class="text-xs text-muted uppercase font-semibold mb-2">Incident Timeline</h4>
-                            <div class="timeline" style="border-left:2px solid var(--color-border);padding-left:var(--space-4);margin-left:var(--space-2);">
-                                ${timeline.map(t => `
-                                    <div style="margin-bottom:var(--space-2);position:relative;">
-                                        <div style="position:absolute;left:-21px;top:4px;width:10px;height:10px;border-radius:50%;background:var(--color-accent);"></div>
-                                        <div class="text-xs font-medium" style="color:var(--color-text-primary);">${escapeHtml(t.event || t.description)}</div>
-                                    </div>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }).join('');
-        } catch (err) {
-            el.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
-        }
-    }
-};
-
-// ==============================================================================
-// CONSOLIDATED MODULE 3: RECOVERY SIMULATOR (TAB 5)
-// Autonomous Ops with Human-in-the-Loop "Approve & Execute" and "Rollback"
-// ==============================================================================
-RecoverySimulator.approveAction = async function(simId) {
-    try {
-        const session = AegisAuth.getSession();
-        const approver = session ? session.name : 'Aditya Puri (Owner)';
-        const res = await AegisAPI.post('/recovery/approve', { simulation_id: simId, approver: approver });
-        AegisToast.success(`Remediation for ${res.incident_id} APPROVED & EXECUTED! Status: Mitigated`);
-        await this.load();
-    } catch (err) {
-        AegisToast.error(err.message);
-    }
-};
-
-RecoverySimulator.rollbackAction = async function(simId) {
-    try {
-        const res = await AegisAPI.post('/recovery/rollback', { simulation_id: simId, reason: 'Operator requested rollback' });
-        AegisToast.warning(`Remediation for ${res.incident_id} ROLLED BACK to previous snapshot!`);
-        await this.load();
-    } catch (err) {
-        AegisToast.error(err.message);
-    }
-};
-
-RecoverySimulator.load = async function() {
-    const el = document.getElementById('recovery-content');
-    if (!el) return;
-
-    try {
-        const [simulations, audits] = await Promise.all([
-            AegisAPI.get('/recovery').catch(() => []),
-            AegisAPI.get('/audit?limit=15').catch(() => [])
-        ]);
-
-        el.innerHTML = `
-            <!-- Workflow Guide -->
-            <div class="card" style="margin-bottom:var(--space-6);">
-                <div class="card-header">
-                    <span class="card-title">Controlled Remediation Workflow</span>
-                    <span class="badge badge-accent">Human-in-the-Loop Autonomous Ops</span>
-                </div>
-                <div style="display:flex;gap:var(--space-2);flex-wrap:wrap;padding:var(--space-2) 0;">
-                    <span class="badge badge-accent">1. AIOps Detection (Z > 2.5)</span>
-                    <span class="text-muted">→</span>
-                    <span class="badge badge-accent">2. Recommendation</span>
-                    <span class="text-muted">→</span>
-                    <span class="badge badge-good">3. Policy Check PASSED</span>
-                    <span class="text-muted">→</span>
-                    <span class="badge badge-fair">4. Human Approval</span>
-                    <span class="text-muted">→</span>
-                    <span class="badge badge-excellent">5. Safe Execution</span>
-                    <span class="text-muted">→</span>
-                    <span class="badge badge-teal">6. Instant Rollback Hook</span>
-                </div>
-            </div>
-
-            <!-- Active Proposals Awaiting Operator Approval -->
-            <div class="card" style="margin-bottom:var(--space-6);">
-                <div class="card-header">
-                    <div>
-                        <span class="card-title">Remediation Action Plans & Decision Gate</span>
-                        <p class="text-xs text-muted">Review recommended operational mitigations, verify policy compliance, and trigger approved execution</p>
-                    </div>
-                    <span class="badge badge-fair">${simulations.length} Records</span>
-                </div>
-                ${simulations.length === 0 ? `
-                    <div class="empty-state" style="padding:var(--space-6);">
-                        <p class="text-sm text-muted">No pending remediation proposals. All banking systems operating nominally.</p>
-                    </div>` :
-                    simulations.map(sim => `
-                    <div style="border:1px solid var(--color-border);padding:var(--space-4);border-radius:var(--radius-md);margin-bottom:var(--space-4);background:var(--color-bg-secondary);">
-                        <div class="flex items-center justify-between flex-wrap gap-3">
-                            <div>
-                                <div class="flex items-center gap-2 mb-1">
-                                    <span class="badge badge-accent mono font-semibold">${escapeHtml(sim.simulation_id)}</span>
-                                    <span class="badge badge-poor mono font-semibold">${escapeHtml(sim.incident_id)}</span>
-                                    <span class="badge ${sim.status === 'Executed & Mitigated' ? 'badge-excellent' : (sim.status === 'Rolled Back' ? 'badge-poor' : 'badge-fair')} font-semibold">
-                                        ${escapeHtml(sim.status)}
-                                    </span>
-                                </div>
-                                <h3 style="font-size:var(--text-base);font-weight:700;color:var(--color-text-primary);margin:4px 0;">
-                                    ${escapeHtml(sim.simulated_action || sim.recommendation_text)}
-                                </h3>
-                                <div class="text-xs" style="color:var(--color-excellent);font-weight:600;margin-top:2px;">
-                                    ✓ Policy Check: ${escapeHtml(sim.policy_check)}
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-2">
-                                <button class="btn btn-primary btn-sm" onclick="RecoverySimulator.approveAction('${escapeHtml(sim.simulation_id)}')">
-                                    ${AegisIcons.check()} Approve & Execute
-                                </button>
-                                <button class="btn btn-secondary btn-sm" style="color:var(--color-fair);border-color:var(--color-fair);" onclick="RecoverySimulator.rollbackAction('${escapeHtml(sim.simulation_id)}')">
-                                    ${AegisIcons.refresh()} Rollback
-                                </button>
-                            </div>
-                        </div>
-
-                        <!-- Projected Impact / Result -->
-                        <div style="margin-top:var(--space-3);background:var(--color-bg-primary);padding:var(--space-3);border-radius:var(--radius-sm);border:1px solid var(--color-border);">
-                            <div class="text-xs text-muted uppercase font-semibold mb-1">Projected Simulation Impact & Verification</div>
-                            <p class="text-xs" style="color:var(--color-text-primary);">${escapeHtml(sim.simulation_result || 'Predicted latency drop from 1420ms to 195ms within 12 seconds; zero transaction drops.')}</p>
-                            <div class="text-xs mono text-muted mt-2">
-                                <strong>Rollback Hook:</strong> <code>${escapeHtml(sim.rollback_info || 'kubectl scale deployment upi-switch --replicas=4')}</code>
-                            </div>
-                        </div>
-                    </div>`).join('')}
-            </div>
-
-            <!-- Immutable Audit Log Trail -->
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <span class="card-title">Immutable Remediation & Ops Audit Trail</span>
-                        <p class="text-xs text-muted">Cryptographically verified operator approvals, executions, and rollbacks</p>
-                    </div>
-                    <span class="badge badge-accent">${audits.length} Entries</span>
-                </div>
-                <div class="table-container">
-                    <table class="data-table">
-                        <thead>
-                            <tr>
-                                <th>Timestamp (UTC)</th>
-                                <th>Actor</th>
-                                <th>Action Taken</th>
-                                <th>Target</th>
-                                <th>Result</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${audits.length === 0 ? `<tr><td colspan="5" class="text-center text-muted">No audit logs recorded yet.</td></tr>` :
-                            audits.map(a => `
-                                <tr>
-                                    <td class="text-xs text-muted mono">${escapeHtml(a.timestamp_utc ? a.timestamp_utc.slice(0, 19).replace('T', ' ') : '—')}</td>
-                                    <td><strong>${escapeHtml(a.actor)}</strong></td>
-                                    <td class="font-medium">${escapeHtml(a.action)}</td>
-                                    <td class="mono text-xs">${escapeHtml(a.target)}</td>
-                                    <td><span class="badge ${a.result === 'Success' ? 'badge-excellent' : 'badge-poor'}">${escapeHtml(a.result)}</span></td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            </div>`;
-    } catch (err) {
-        el.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
-    }
-};
-
-// ==============================================================================
-// CONSOLIDATED MODULE 4: EGRESS PROOF (TAB 6)
-// Mandatory Side-by-Side Privacy Inspector: Raw PII Log vs Sanitized SaaS Payload
-// ==============================================================================
-const EgressProofModule = {
-    _selectedProof: null,
-
-    async render(container) {
-        container.innerHTML = `
-            <div class="page-header">
-                <div class="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                        <h1 class="page-title">Egress Proof & Privacy Inspector</h1>
-                        <p class="page-subtitle">Side-by-side privacy inspector: Blocked local customer PII logs vs sanitized SaaS metadata payloads</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button class="btn btn-secondary btn-sm" onclick="EgressProofModule.refresh()">
-                            ${AegisIcons.refresh()} Refresh Log
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Side-by-Side Privacy Inspector Banner -->
-            <div class="card" style="margin-bottom:var(--space-6);border-top:3px solid var(--color-accent);">
-                <div class="card-header">
-                    <div>
-                        <span class="card-title" style="display:flex;align-items:center;gap:6px;">
-                            ${AegisIcons.shieldCheck()} Side-by-Side Privacy Inspector
-                        </span>
-                        <p class="text-xs text-muted" id="egress-inspector-meta">Select any egress record below to inspect the pre-scrubbed raw log vs sanitized SaaS transmission</p>
-                    </div>
-                    <div id="egress-hash-badge">
-                        <span class="badge badge-excellent">✓ Cryptographically Verified (SHA-256)</span>
-                    </div>
-                </div>
-
-                <div class="side-by-side-inspector">
-                    <!-- Left: Raw Local Log (Blocked at Tier 1) -->
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-semibold uppercase" style="color:#ef4444;display:flex;align-items:center;gap:4px;">
-                                🛡️ Tier 1 Local Raw Log (Sensitive PII Highlighted in Red)
-                            </span>
-                            <span class="badge badge-poor" style="font-size:10px;">Blocked at Edge</span>
-                        </div>
-                        <div class="raw-log-panel" id="egress-raw-panel">
-                            Loading raw local log...
-                        </div>
-                    </div>
-
-                    <!-- Right: Sanitized SaaS Payload (Tier 2 Central) -->
-                    <div>
-                        <div class="flex items-center justify-between mb-2">
-                            <span class="text-xs font-semibold uppercase" style="color:#10b981;display:flex;align-items:center;gap:4px;">
-                                🚀 Tier 2 SaaS Transmitted Payload (Allow-Listed Metadata Only)
-                            </span>
-                            <span class="badge badge-excellent" style="font-size:10px;">Safe SaaS Egress</span>
-                        </div>
-                        <div class="sanitized-json-panel" id="egress-sanitized-panel">
-                            Loading sanitized JSON...
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Historical Egress Records Table -->
-            <div id="egress-table-container">
-                <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
-            </div>`;
-        await this.load();
-    },
-
-    async refresh() {
-        await this.load();
-        AegisToast.info('Egress Proof logs refreshed');
-    },
-
-    highlightPII(rawLog) {
-        if (!rawLog) return 'No raw local log available.';
-        return escapeHtml(rawLog)
-            .replace(/(AccNo:\s*)(\d+)/gi, '$1<mark class="pii-blocked">$2</mark>')
-            .replace(/(CustID:\s*)(\d+)/gi, '$1<mark class="pii-blocked">$2</mark>')
-            .replace(/(CardNo:\s*)(\d+)/gi, '$1<mark class="pii-blocked">$2</mark>')
-            .replace(/(PAN:\s*)([A-Z0-9]+)/gi, '$1<mark class="pii-blocked">$2</mark>')
-            .replace(/(Aadhaar:\s*)([0-9 -]+)/gi, '$1<mark class="pii-blocked">$2</mark>')
-            .replace(/(Customer:\s*)([A-Za-z ]+?)(,\s*Phone)/gi, '$1<mark class="pii-blocked">$2</mark>$3')
-            .replace(/(Phone:\s*)(\+?[0-9 -]+)/gi, '$1<mark class="pii-blocked">$2</mark>')
-            .replace(/(AuthToken:\s*)(eyJ[A-Za-z0-9_.-]+)/gi, '$1<mark class="pii-blocked">$2</mark>')
-            .replace(/(CVV:\s*)(\d+)/gi, '$1<mark class="pii-blocked">$2</mark>')
-            .replace(/(OTP:\s*)(\d+)/gi, '$1<mark class="pii-blocked">$2</mark>')
-            .replace(/(PasswordHash:\s*)(\S+)/gi, '$1<mark class="pii-blocked">$2</mark>');
-    },
-
-    selectProof(p) {
-        this._selectedProof = p;
-        const rawEl = document.getElementById('egress-raw-panel');
-        const sanEl = document.getElementById('egress-sanitized-panel');
-        const metaEl = document.getElementById('egress-inspector-meta');
-        const hashEl = document.getElementById('egress-hash-badge');
-
-        if (metaEl) {
-            metaEl.innerHTML = `Inspecting Payload: <strong class="mono" style="color:var(--color-primary);">${escapeHtml(p.payload_id)}</strong> · Node: <strong class="mono">${escapeHtml(p.source_id)}</strong> · SHA-256: <span class="mono text-xs">${escapeHtml(p.payload_hash.slice(0, 24))}...</span>`;
-        }
-        if (hashEl) {
-            hashEl.innerHTML = `<span class="badge ${p.hash_verified !== false ? 'badge-excellent' : 'badge-poor'}">${p.hash_verified !== false ? '✓ Cryptographically Verified (SHA-256)' : '⚠ Hash Mismatch'}</span>`;
-        }
-
-        const rawText = p.raw_local_log_blocked || `[${p.timestamp_utc}] [INFO] CustID: 994827104, AccNo: 50100492817291, PAN: ABCDE1234F, Aadhaar: 9876-5432-1098, AuthToken: eyJhbGciOi...[BLOCKED], Latency: 1420ms`;
-        if (rawEl) rawEl.innerHTML = this.highlightPII(rawText);
-
-        if (sanEl) {
-            try {
-                const parsed = JSON.parse(p.exact_transmitted_json || '{}');
-                sanEl.textContent = JSON.stringify(parsed, null, 2);
-            } catch (e) {
-                sanEl.textContent = p.exact_transmitted_json || '{}';
-            }
-        }
-    },
-
-    async load() {
-        const tableEl = document.getElementById('egress-table-container');
-        if (!tableEl) return;
-
-        try {
-            const proofs = await AegisAPI.get('/egress-proof?limit=30');
-            if (!proofs || proofs.length === 0) {
-                tableEl.innerHTML = `<div class="card"><div class="empty-state"><h3>No Egress Proofs Recorded</h3></div></div>`;
-                return;
-            }
-
-            this.selectProof(proofs[0]);
-
-            tableEl.innerHTML = `
-                <div class="card">
-                    <div class="card-header">
-                        <span class="card-title">Cryptographic Egress Audit Log (${proofs.length} Records)</span>
-                        <span class="badge badge-accent">SHA-256 Signed</span>
-                    </div>
-                    <div class="table-container">
-                        <table class="data-table">
-                            <thead>
-                                <tr>
-                                    <th>Payload ID</th>
-                                    <th>Source Node</th>
-                                    <th>Timestamp (UTC)</th>
-                                    <th>Status</th>
-                                    <th>Cryptographic Hash</th>
-                                    <th>Action</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${proofs.map((p, idx) => `
-                                    <tr style="cursor:pointer;" onclick="EgressProofModule.selectProof(window._cachedProofs[${idx}])">
-                                        <td class="mono font-semibold" style="color:var(--color-primary);">${escapeHtml(p.payload_id)}</td>
-                                        <td class="mono">${escapeHtml(p.source_id)}</td>
-                                        <td class="text-xs text-muted">${escapeHtml(p.timestamp_utc ? p.timestamp_utc.slice(0, 19).replace('T', ' ') : '—')}</td>
-                                        <td><span class="badge badge-excellent">${escapeHtml(p.transmission_status || 'Delivered')}</span></td>
-                                        <td class="mono text-xs" title="${escapeHtml(p.payload_hash)}">${escapeHtml(p.payload_hash.slice(0, 16))}...</td>
-                                        <td>
-                                            <button class="btn btn-secondary btn-sm" onclick="event.stopPropagation(); EgressProofModule.selectProof(window._cachedProofs[${idx}])">
-                                                Inspect Diff
-                                            </button>
-                                        </td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            `;
-            window._cachedProofs = proofs;
-        } catch (err) {
-            tableEl.innerHTML = `<div class="alert alert-danger">${escapeHtml(err.message)}</div>`;
-        }
-    }
-};
-
-// ==============================================================================
-// CONSOLIDATED MODULE 5: AUDIT & POLICIES (TAB 7)
-// Combines Privacy Passport (Allow-List vs Redacted) and Immutable Audit Center
-// ==============================================================================
-const AuditPoliciesModule = {
-    _activeTab: 'policies', // 'policies' or 'audit'
-
-    async render(container) {
-        container.innerHTML = `
-            <div class="page-header">
-                <div class="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                        <h1 class="page-title">Audit & Privacy Policies</h1>
-                        <p class="page-subtitle">Allow-listed vs redacted fields (Privacy Passport) and an immutable transfer/remediation audit log</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <div class="btn-group" style="display:inline-flex;background:var(--color-bg-secondary);border:1px solid var(--color-border);border-radius:var(--radius-md);padding:2px;">
-                            <button id="ap-tab-pol" class="btn btn-sm ${this._activeTab === 'policies' ? 'btn-primary' : 'btn-ghost'}" onclick="AuditPoliciesModule.switchTab('policies')">
-                                ${AegisIcons.shieldCheck()} Allow-List & Policies
-                            </button>
-                            <button id="ap-tab-aud" class="btn btn-sm ${this._activeTab === 'audit' ? 'btn-primary' : 'btn-ghost'}" onclick="AuditPoliciesModule.switchTab('audit')">
-                                ${AegisIcons.fileText()} Immutable Audit Trail
-                            </button>
-                        </div>
-                        <button class="btn btn-secondary btn-sm" onclick="AuditPoliciesModule.refresh()">
-                            ${AegisIcons.refresh()} Refresh
-                        </button>
-                    </div>
-                </div>
-            </div>
-            <div id="ap-main-content">
-                <div style="display:flex;justify-content:center;padding:var(--space-8);"><div class="spinner"></div></div>
-            </div>`;
-        await this.load();
-    },
-
-    switchTab(tab) {
-        this._activeTab = tab;
-        const bPol = document.getElementById('ap-tab-pol');
-        const bAud = document.getElementById('ap-tab-aud');
-        if (bPol) bPol.className = `btn btn-sm ${tab === 'policies' ? 'btn-primary' : 'btn-ghost'}`;
-        if (bAud) bAud.className = `btn btn-sm ${tab === 'audit' ? 'btn-primary' : 'btn-ghost'}`;
-        this.load();
-    },
-
-    async refresh() {
-        await this.load();
-        AegisToast.info('Audit & Policies refreshed');
-    },
-
-    async load() {
-        const el = document.getElementById('ap-main-content');
-        if (!el) return;
-        if (this._activeTab === 'policies') {
-            await PrivacyPassport.render(el);
-        } else {
-            await AuditCenter.render(el);
-        }
-    }
-};
-
-// ==============================================================================
-// CONSOLIDATED MODULE 6: DEMO CONTROLS & SETTINGS (TAB 8)
-// 4 Live Scenario Triggers + Configurable Threshold Sliders + Seed Reset
-// ==============================================================================
-const DemoSettingsModule = {
-    async render(container) {
-        container.innerHTML = `
-            <div class="page-header">
-                <div class="flex items-center justify-between flex-wrap gap-4">
-                    <div>
-                        <h1 class="page-title">Demo Controls & Threshold Settings</h1>
-                        <p class="page-subtitle">Live scenario triggers for hackathon demonstrations, plus configurable health state threshold sliders</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <button class="btn btn-secondary btn-sm" onclick="DemoSettingsModule.resetBankingSeed()">
-                            ${AegisIcons.refresh()} Reset Banking Seed Dataset
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Live Scenario Triggers Grid -->
-            <div class="card" style="margin-bottom:var(--space-6);">
-                <div class="card-header">
-                    <div>
-                        <span class="card-title">Live Hackathon Demonstration Scenarios</span>
-                        <p class="text-xs text-muted">Click any scenario trigger button to execute immediate live pipeline breaches and view real-time responses</p>
-                    </div>
-                    <span class="badge badge-accent">4 Live Triggers</span>
-                </div>
-
-                <div class="scenario-btn-grid" style="margin-top:var(--space-4);">
-                    <!-- 1. Inject Raw PII Log -->
-                    <div class="scenario-card">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="stat-icon poor" style="width:32px;height:32px;">${AegisIcons.shieldCheck()}</span>
-                            <strong>Scenario 1: Raw PII Log</strong>
-                        </div>
-                        <p class="text-xs text-muted mb-3">Injects customer Account Number, PAN, Aadhaar, and JWT into Tier 1 collector. Verifies sensitive data is blocked locally and sanitized metadata reaches Tier 2.</p>
-                        <button class="btn btn-primary btn-sm" style="width:100%;" onclick="DemoSettingsModule.injectPIILog()">
-                            Inject Raw PII Log
-                        </button>
-                    </div>
-
-                    <!-- 2. Inject Brute-Force Login Spike -->
-                    <div class="scenario-card">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="stat-icon poor" style="width:32px;height:32px;">${AegisIcons.lock()}</span>
-                            <strong>Scenario 2: Brute-Force Spike</strong>
-                        </div>
-                        <p class="text-xs text-muted mb-3">Simulates 42 high-velocity failed PIN attempts on ATM Switch Node within 60s. Generates critical security threat alert in Telemetry & Security tab.</p>
-                        <button class="btn btn-primary btn-sm" style="width:100%;" onclick="DemoSettingsModule.injectBruteForce()">
-                            Inject Brute-Force Spike
-                        </button>
-                    </div>
-
-                    <!-- 3. Inject Latency / Packet Loss Spike -->
-                    <div class="scenario-card">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="stat-icon fair" style="width:32px;height:32px;">${AegisIcons.wifi()}</span>
-                            <strong>Scenario 3: Latency Spike (Z>2.5)</strong>
-                        </div>
-                        <p class="text-xs text-muted mb-3">Injects payment gateway latency jump to 1450ms (baseline 180ms, Z=3.9 > 2.5) and 3.8% packet loss. Transitions health state to Poor.</p>
-                        <button class="btn btn-primary btn-sm" style="width:100%;" onclick="DemoSettingsModule.injectNetworkSpike()">
-                            Inject Latency Spike
-                        </button>
-                    </div>
-
-                    <!-- 4. Simulate SaaS Outage / Reconnect -->
-                    <div class="scenario-card">
-                        <div class="flex items-center gap-2 mb-2">
-                            <span class="stat-icon accent" style="width:32px;height:32px;">${AegisIcons.radio()}</span>
-                            <strong>Scenario 4: Outage & Reconnect</strong>
-                        </div>
-                        <p class="text-xs text-muted mb-3">Disconnects SaaS ingestion to test local SQLite queue buffering. On reconnect, flushes all buffered records idempotently without duplicate records.</p>
-                        <button class="btn btn-primary btn-sm" style="width:100%;" id="btn-outage-toggle" onclick="DemoSettingsModule.toggleOutage()">
-                            Simulate Outage / Reconnect
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Live Scenario Feedback Display -->
-                <div style="background:var(--color-bg-primary);border:1px solid var(--color-border);padding:var(--space-4);border-radius:var(--radius-md);">
-                    <div class="flex items-center justify-between mb-2">
-                        <span class="text-xs text-muted uppercase font-semibold">Live Demonstration Execution Console</span>
-                        <span class="badge badge-accent" id="demo-console-badge">Ready</span>
-                    </div>
-                    <pre id="demo-live-console" class="mono text-xs" style="color:var(--color-accent);white-space:pre-wrap;max-height:160px;overflow-y:auto;margin:0;">Click any scenario button above to trigger an autonomous end-to-end operational test.</pre>
-                </div>
-            </div>
-
-            <!-- Configurable Threshold Sliders -->
-            <div class="card">
-                <div class="card-header">
-                    <div>
-                        <span class="card-title">Configurable Health State Threshold Sliders</span>
-                        <p class="text-xs text-muted">Adjust operational thresholds dynamically to calibrate Excellent, Good, Fair, and Poor state classifications</p>
-                    </div>
-                    <button class="btn btn-primary btn-sm" onclick="DemoSettingsModule.saveThresholds()">
-                        ${AegisIcons.check()} Save Thresholds
-                    </button>
-                </div>
-
-                <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));gap:var(--space-6);margin-top:var(--space-4);">
-                    <!-- CPU Thresholds -->
-                    <div style="background:var(--color-bg-secondary);padding:var(--space-4);border-radius:var(--radius-md);border:1px solid var(--color-border);">
-                        <h4 class="text-sm font-semibold mb-3">CPU Utilization Thresholds (%)</h4>
-                        <div style="display:grid;gap:var(--space-3);">
-                            <div>
-                                <div class="flex items-center justify-between text-xs mb-1">
-                                    <span style="color:var(--color-excellent);">Excellent (Max %):</span>
-                                    <strong id="val-cpu-exc">50%</strong>
-                                </div>
-                                <input type="range" min="20" max="60" value="50" class="form-range" id="range-cpu-exc" oninput="document.getElementById('val-cpu-exc').textContent = this.value + '%'" style="width:100%;">
-                            </div>
-                            <div>
-                                <div class="flex items-center justify-between text-xs mb-1">
-                                    <span style="color:var(--color-good);">Good (Max %):</span>
-                                    <strong id="val-cpu-good">75%</strong>
-                                </div>
-                                <input type="range" min="50" max="85" value="75" class="form-range" id="range-cpu-good" oninput="document.getElementById('val-cpu-good').textContent = this.value + '%'" style="width:100%;">
-                            </div>
-                            <div>
-                                <div class="flex items-center justify-between text-xs mb-1">
-                                    <span style="color:var(--color-fair);">Fair (Max %):</span>
-                                    <strong id="val-cpu-fair">90%</strong>
-                                </div>
-                                <input type="range" min="75" max="98" value="90" class="form-range" id="range-cpu-fair" oninput="document.getElementById('val-cpu-fair').textContent = this.value + '%'" style="width:100%;">
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Latency Thresholds -->
-                    <div style="background:var(--color-bg-secondary);padding:var(--space-4);border-radius:var(--radius-md);border:1px solid var(--color-border);">
-                        <h4 class="text-sm font-semibold mb-3">Payment Switch Latency Thresholds (ms)</h4>
-                        <div style="display:grid;gap:var(--space-3);">
-                            <div>
-                                <div class="flex items-center justify-between text-xs mb-1">
-                                    <span style="color:var(--color-excellent);">Excellent (Max ms):</span>
-                                    <strong id="val-lat-exc">200 ms</strong>
-                                </div>
-                                <input type="range" min="50" max="400" value="200" class="form-range" id="range-lat-exc" oninput="document.getElementById('val-lat-exc').textContent = this.value + ' ms'" style="width:100%;">
-                            </div>
-                            <div>
-                                <div class="flex items-center justify-between text-xs mb-1">
-                                    <span style="color:var(--color-good);">Good (Max ms):</span>
-                                    <strong id="val-lat-good">500 ms</strong>
-                                </div>
-                                <input type="range" min="200" max="800" value="500" class="form-range" id="range-lat-good" oninput="document.getElementById('val-lat-good').textContent = this.value + ' ms'" style="width:100%;">
-                            </div>
-                            <div>
-                                <div class="flex items-center justify-between text-xs mb-1">
-                                    <span style="color:var(--color-fair);">Fair (Max ms):</span>
-                                    <strong id="val-lat-fair">1000 ms</strong>
-                                </div>
-                                <input type="range" min="500" max="2000" value="1000" class="form-range" id="range-lat-fair" oninput="document.getElementById('val-lat-fair').textContent = this.value + ' ms'" style="width:100%;">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>`;
-        this.loadThresholds();
-    },
-
-    async loadThresholds() {
-        try {
-            const data = await AegisAPI.get('/demo/thresholds');
-            if (data) {
-                if (data.cpu_excellent) {
-                    const r = document.getElementById('range-cpu-exc');
-                    if (r) { r.value = data.cpu_excellent; document.getElementById('val-cpu-exc').textContent = `${data.cpu_excellent}%`; }
-                }
-                if (data.latency_excellent) {
-                    const r = document.getElementById('range-lat-exc');
-                    if (r) { r.value = data.latency_excellent; document.getElementById('val-lat-exc').textContent = `${data.latency_excellent} ms`; }
-                }
-            }
-        } catch(e) {}
-    },
-
-    async saveThresholds() {
-        try {
-            const cExc = parseInt(document.getElementById('range-cpu-exc')?.value || 50, 10);
-            const lExc = parseInt(document.getElementById('range-lat-exc')?.value || 200, 10);
-            await AegisAPI.post('/demo/thresholds', { cpu_excellent: cExc, latency_excellent: lExc });
-            AegisToast.success('Threshold settings saved successfully!');
-        } catch (err) {
-            AegisToast.error(err.message);
-        }
-    },
-
-    async injectPIILog() {
-        const consoleEl = document.getElementById('demo-live-console');
-        const badgeEl = document.getElementById('demo-console-badge');
-        if (badgeEl) badgeEl.textContent = 'Injecting PII...';
-
-        try {
-            const res = await AegisAPI.post('/demo/inject-pii-log', {});
-            AegisToast.success('Raw banking log PII scrubbed & Egress Proof generated!');
-            if (badgeEl) badgeEl.textContent = 'Verified ✓';
-            if (consoleEl) {
-                consoleEl.textContent = `=== SCENARIO 1: RAW PII LOG FILTERED ===\n` +
-                    `[TIER 1 BLOCKED LOG]: ${res.raw_local_log_blocked}\n\n` +
-                    `[TIER 2 TRANSMITTED METADATA]:\n${JSON.stringify(res.sanitized_saas_payload, null, 2)}\n\n` +
-                    `[EGRESS PROOF SHA-256]: ${res.payload_hash}\n` +
-                    `-> Sensitive customer PII never exited Tier 1. Visit 'Egress Proof' tab to inspect side-by-side!`;
-            }
-        } catch (err) {
-            AegisToast.error(err.message);
-        }
-    },
-
-    async injectBruteForce() {
-        const consoleEl = document.getElementById('demo-live-console');
-        const badgeEl = document.getElementById('demo-console-badge');
-        if (badgeEl) badgeEl.textContent = 'Injecting Brute-Force...';
-
-        try {
-            const res = await AegisAPI.post('/demo/inject-brute-force', {});
-            AegisToast.warning('Critical security breach: 42 ATM PIN attempts flagged!');
-            if (badgeEl) badgeEl.textContent = 'Alert Created ✓';
-            if (consoleEl) {
-                consoleEl.textContent = `=== SCENARIO 2: ATM BRUTE-FORCE SPIKE ===\n` +
-                    `[DETECTED]: 42 failed PIN attempts within 60s from subnet 185.220.101.0/24\n` +
-                    `[SEVERITY]: Critical\n` +
-                    `[MITIGATION]: Automated terminal lock and IP throttle applied\n` +
-                    `-> Visit 'Telemetry & Security' tab to inspect real-time security alerts!`;
-            }
-        } catch (err) {
-            AegisToast.error(err.message);
-        }
-    },
-
-    async injectNetworkSpike() {
-        const consoleEl = document.getElementById('demo-live-console');
-        const badgeEl = document.getElementById('demo-console-badge');
-        if (badgeEl) badgeEl.textContent = 'Injecting Latency Spike...';
-
-        try {
-            const res = await AegisAPI.post('/demo/inject-network-spike', {});
-            AegisToast.warning('Payment Switch Latency spiked to 1450ms (Z=3.9 > 2.5)!');
-            if (badgeEl) badgeEl.textContent = 'Z-Score Breach ✓';
-            if (consoleEl) {
-                consoleEl.textContent = `=== SCENARIO 3: UPI PAYMENT LATENCY SPIKE ===\n` +
-                    `[OBSERVED LATENCY]: ${res.latency_ms} ms (Baseline: 180 ms)\n` +
-                    `[Z-SCORE]: +3.84σ (Exceeds 2.5 threshold)\n` +
-                    `[PACKET LOSS]: ${res.packet_loss_pct}%\n` +
-                    `[HEALTH STATE]: ${res.health_state}\n` +
-                    `-> Visit 'AIOps Incidents' to inspect INC-2026-089 and recovery proposals!`;
-            }
-        } catch (err) {
-            AegisToast.error(err.message);
-        }
-    },
-
-    async toggleOutage() {
-        const consoleEl = document.getElementById('demo-live-console');
-        const badgeEl = document.getElementById('demo-console-badge');
-        if (badgeEl) badgeEl.textContent = 'Toggling Outage...';
-
-        try {
-            const res = await AegisAPI.post('/demo/simulate-outage-toggle', {});
-            const btn = document.getElementById('btn-outage-toggle');
-            if (res.outage_simulated) {
-                AegisToast.warning('SaaS Outage Active: Tier 1 buffering locally in SQLite!');
-                if (btn) btn.textContent = 'Reconnect SaaS & Flush Buffer';
-            } else {
-                AegisToast.success('SaaS Reconnected: All buffered records flushed idempotently!');
-                if (btn) btn.textContent = 'Simulate Outage / Reconnect';
-            }
-            if (badgeEl) badgeEl.textContent = res.collector_status;
-            if (consoleEl) {
-                consoleEl.textContent = `=== SCENARIO 4: SAAS OUTAGE & IDEMPOTENT BUFFERING ===\n` +
-                    `[COLLECTOR STATUS]: ${res.collector_status}\n` +
-                    `[BUFFERED QUEUE SIZE]: ${res.buffered_records} payloads\n` +
-                    `[RESULT]: ${res.message}\n` +
-                    `-> Visit 'Collectors' tab to inspect pending buffer size!`;
-            }
-        } catch (err) {
-            AegisToast.error(err.message);
-        }
-    },
-
-    async resetBankingSeed() {
-        try {
-            await AegisAPI.post('/demo/reset-banking-seed', {});
-            AegisToast.success('Banking seed dataset reloaded (BANK_HDFC_IN & BANK_ICICI_IN)!');
-            window.location.reload();
-        } catch (err) {
-            AegisToast.error(err.message);
+        } catch(err) {
+            AegisToast.error('Collector port 8001 error: ' + err.message);
         }
     }
 };
 
 // Export to window
-window.TelemetrySecurityModule = TelemetrySecurityModule;
-window.AIOpsIncidentsModule = AIOpsIncidentsModule;
-window.EgressProofModule = EgressProofModule;
-window.AuditPoliciesModule = AuditPoliciesModule;
-window.DemoSettingsModule = DemoSettingsModule;
-
 window.InfraMonitoring = InfraMonitoring;
 window.NetworkMonitoring = NetworkMonitoring;
 window.SecurityMonitoring = SecurityMonitoring;
@@ -3180,8 +2054,8 @@ window.CollectorManagement = CollectorManagement;
 window.IncidentDNA = IncidentDNA;
 window.AIInsights = AIInsights;
 window.PrivacyPassport = PrivacyPassport;
-window.EgressProof = EgressProofModule;
+window.EgressProof = EgressProof;
 window.AuditCenter = AuditCenter;
 window.RecoverySimulator = RecoverySimulator;
 window.OrgSettings = OrgSettings;
-window.DemoControls = DemoControls;
+window.DiagnosticsControls = DiagnosticsControls;

@@ -27,8 +27,19 @@ async def list_collectors(
         # Check if collector has missed heartbeats > threshold
         is_offline = False
         if c.last_heartbeat:
-            delta = (now_utc - c.last_heartbeat.replace(tzinfo=datetime.timezone.utc if not c.last_heartbeat.tzinfo else None)).total_seconds()
-            if delta > settings.COLLECTOR_OFFLINE_THRESHOLD_SECONDS:
+            hb = c.last_heartbeat
+            if isinstance(hb, str):
+                try:
+                    hb = datetime.datetime.fromisoformat(hb)
+                except Exception:
+                    hb = None
+            if hb:
+                if hb.tzinfo is None:
+                    hb = hb.replace(tzinfo=datetime.timezone.utc)
+                delta = abs((now_utc - hb).total_seconds())
+                if delta > settings.COLLECTOR_OFFLINE_THRESHOLD_SECONDS:
+                    is_offline = True
+            else:
                 is_offline = True
         else:
             is_offline = True
@@ -38,12 +49,10 @@ async def list_collectors(
             collector_id=c.collector_id,
             tenant_id=c.tenant_id,
             host_identifier=c.host_identifier,
-            collector_name=c.host_identifier,
             version=c.version,
             status=status_str,
             last_heartbeat=c.last_heartbeat.isoformat() if c.last_heartbeat else "Never",
             pending_buffered=c.pending_buffered,
-            local_buffer_queue_size=c.pending_buffered,
             cpu_usage=c.cpu_usage,
             memory_usage=c.memory_usage,
             os_info=c.os_info,

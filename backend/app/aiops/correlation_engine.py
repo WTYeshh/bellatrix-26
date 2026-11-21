@@ -62,7 +62,7 @@ class IncidentCorrelationEngine:
             confidence = 0.90
         elif "cpu_usage" in metrics:
             title = f"Sustained CPU Anomaly on {', '.join(sources)}"
-            likely_cause = "Compute utilization exceeded historical baseline by multiple standard deviations."
+            likely_cause = "Compute utilization exceeded recorded baseline by multiple standard deviations."
             investigation = "Check top consuming processes, background cron tasks, and thread contention."
             confidence = 0.88
         else:
@@ -87,13 +87,20 @@ class IncidentCorrelationEngine:
             }
         ]
 
+        first_anom = anomalies[0] if anomalies else {}
+        top_procs = first_anom.get("contributing_processes", [])
+
         return {
             "incident_id": incident_id,
             "title": title,
             "severity": max_sev,
             "status": "Active",
-            "affected_service": f"Service-{sources[0] if sources else 'Fleet'}",
+            "affected_service": sources[0] if sources else "server-01",
             "affected_collectors": sources,
+            "metric_breached": first_anom.get("metric", "cpu_usage"),
+            "observed_value": first_anom.get("observed_value", 0.0),
+            "expected_value": first_anom.get("baseline_value", 0.0),
+            "contributing_processes": json.dumps(top_procs) if isinstance(top_procs, list) else str(top_procs),
             "related_alerts": anomalies,
             "timeline": timeline,
             "likely_cause": likely_cause,

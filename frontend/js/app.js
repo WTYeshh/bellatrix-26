@@ -12,6 +12,9 @@ const AegisApp = (() => {
         // Check for existing session
         const session = AegisAuth.getSession();
         if (session) {
+            if (!AegisAPI.getToken()) {
+                AegisAPI.setToken('aegis-session-token');
+            }
             showApp();
         } else {
             showLogin();
@@ -39,6 +42,7 @@ const AegisApp = (() => {
         document.getElementById('login-page').classList.add('hidden');
         document.getElementById('app-page').classList.remove('hidden');
         setupSidebar();
+        setupTenantSwitcher();
         setupRoutes();
         initEventStream();
         initAutoRefreshPolling();
@@ -46,6 +50,11 @@ const AegisApp = (() => {
         // Navigate to hash or default
         const hash = window.location.hash.slice(1) || 'command-center';
         AegisRouter.navigate(hash);
+    }
+
+    function setupTenantSwitcher() {
+        // Single server node server-01 (Laptop)
+        AegisAPI.setTenantId('default');
     }
 
     function initAutoRefreshPolling() {
@@ -121,11 +130,7 @@ const AegisApp = (() => {
                 const result = await AegisAuth.login(email, password);
 
                 if (result.success) {
-                    if (result.demo) {
-                        AegisToast.warning('Running in demo mode — backend not connected');
-                    } else {
-                        AegisToast.success('Welcome back!');
-                    }
+                    AegisToast.success('Welcome back!');
                     showApp();
                 } else {
                     errEl.textContent = result.error;
@@ -194,19 +199,6 @@ const AegisApp = (() => {
             };
         });
 
-        // Global Tenant Switcher
-        const tenantSelect = document.getElementById('global-tenant-select');
-        if (tenantSelect) {
-            tenantSelect.value = AegisAPI.getTenant();
-            tenantSelect.onchange = (e) => {
-                const newTenant = e.target.value;
-                AegisAPI.setTenant(newTenant);
-                AegisToast.success(`Switched active tenant to ${newTenant}`);
-                const curPage = AegisRouter.getCurrentPage() || 'command-center';
-                AegisRouter.navigate(curPage);
-            };
-        }
-
         // Logout
         const logoutBtn = document.getElementById('sidebar-logout');
         if (logoutBtn) {
@@ -225,7 +217,7 @@ const AegisApp = (() => {
             updateBreadcrumb(path);
         });
 
-        // 13 Full Distinct Routes (No Empty Pages)
+        // 13 Distinct Functional Sections
         AegisRouter.register('command-center', (el) => CommandCenter.render(el));
         AegisRouter.register('infrastructure', (el) => InfraMonitoring.render(el));
         AegisRouter.register('network', (el) => NetworkMonitoring.render(el));
@@ -234,38 +226,38 @@ const AegisApp = (() => {
         AegisRouter.register('incident-dna', (el) => IncidentDNA.render(el));
         AegisRouter.register('ai-insights', (el) => AIInsights.render(el));
         AegisRouter.register('recovery-simulator', (el) => RecoverySimulator.render(el));
-        AegisRouter.register('demo-controls', (el) => DemoControls.render(el));
+        AegisRouter.register('diagnostics-controls', (el) => DiagnosticsControls.render(el));
         AegisRouter.register('privacy-passport', (el) => PrivacyPassport.render(el));
-        AegisRouter.register('egress-proof', (el) => EgressProofModule.render(el));
+        AegisRouter.register('egress-proof', (el) => EgressProof.render(el));
         AegisRouter.register('audit-center', (el) => AuditCenter.render(el));
         AegisRouter.register('settings', (el) => OrgSettings.render(el));
 
-        // Backwards-compatibility aliases
-        AegisRouter.register('telemetry-security', (el) => TelemetrySecurityModule.render(el));
-        AegisRouter.register('aiops-incidents', (el) => AIOpsIncidentsModule.render(el));
-        AegisRouter.register('audit-policies', (el) => AuditPoliciesModule.render(el));
-        AegisRouter.register('demo-settings', (el) => DemoSettingsModule.render(el));
+        // Grouped aliases for backwards compatibility
+        AegisRouter.register('telemetry-security', (el) => TelemetrySecurity.render(el));
+        AegisRouter.register('aiops-incidents', (el) => AIOpsIncidents.render(el));
+        AegisRouter.register('audit-policies', (el) => AuditPolicies.render(el));
+        AegisRouter.register('diagnostics-settings', (el) => DiagnosticsControls.render(el));
     }
 
     function updateBreadcrumb(path) {
         const pageNames = {
             'command-center': 'Command Center',
-            'infrastructure': 'Infrastructure Monitoring',
-            'network': 'Network Telemetry',
-            'security': 'Security Monitoring',
-            'collectors': 'Collector Fleet',
-            'incident-dna': 'Incident DNA Correlation',
-            'ai-insights': 'Explainable AI Insights',
-            'recovery-simulator': 'Recovery Simulator',
-            'demo-controls': 'AI Demo Controls',
-            'privacy-passport': 'Privacy Passport',
-            'egress-proof': 'Egress Proof & Privacy Inspector',
-            'audit-center': 'Audit Center',
-            'settings': 'Organization Settings',
             'telemetry-security': 'Telemetry & Security',
+            'infrastructure': 'Infrastructure',
+            'network': 'Network',
+            'security': 'Security',
+            'collectors': 'Collectors',
             'aiops-incidents': 'AIOps Incidents',
+            'incident-dna': 'Incident DNA',
+            'ai-insights': 'AI Insights',
+            'recovery-simulator': 'Recovery Simulator',
+            'egress-proof': 'Egress Proof',
             'audit-policies': 'Audit & Policies',
-            'demo-settings': 'Demo Controls & Settings'
+            'privacy-passport': 'Privacy Passport',
+            'audit-center': 'Audit Center',
+            'diagnostics-settings': 'Diagnostics & Settings',
+            'diagnostics-controls': 'Diagnostics & Stress',
+            'settings': 'Settings',
         };
 
         const el = document.getElementById('breadcrumb');

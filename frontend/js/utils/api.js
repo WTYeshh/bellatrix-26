@@ -7,10 +7,8 @@ const AegisAPI = (() => {
 
     function getHost() {
         if (_activeHost) return _activeHost;
-        if (typeof window !== 'undefined' && window.location) {
-            if (window.location.hostname === '127.0.0.1') return '127.0.0.1';
-            if (window.location.hostname === 'localhost') return '127.0.0.1';
-            if (window.location.hostname) return window.location.hostname;
+        if (typeof window !== 'undefined' && window.location && window.location.hostname) {
+            return window.location.hostname;
         }
         return '127.0.0.1';
     }
@@ -20,22 +18,11 @@ const AegisAPI = (() => {
     }
 
     let _token = null;
+    let _tenantId = 'default';
     let _connected = false;
     let _lastHealth = null;
     let _onConnectionChange = null;
-    let _tenant = localStorage.getItem('aegis_tenant') || 'BANK_HDFC_IN';
-
-    function getTenant() {
-        if (!_tenant) {
-            _tenant = localStorage.getItem('aegis_tenant') || 'BANK_HDFC_IN';
-        }
-        return _tenant;
-    }
-
-    function setTenant(t) {
-        _tenant = t;
-        localStorage.setItem('aegis_tenant', t);
-    }
+    let _onTenantChange = null;
 
     function setToken(token) {
         _token = token;
@@ -47,10 +34,22 @@ const AegisAPI = (() => {
     }
 
     function getToken() {
-        if (!_token) {
+        if (!_token && typeof localStorage !== 'undefined') {
             _token = localStorage.getItem('aegis_token');
         }
         return _token;
+    }
+
+    function setTenantId(tid) {
+        _tenantId = 'default';
+    }
+
+    function getTenantId() {
+        return 'default';
+    }
+
+    function setTenantChangeCallback(cb) {
+        _onTenantChange = cb;
     }
 
     function isAuthenticated() {
@@ -76,7 +75,7 @@ const AegisAPI = (() => {
 
         const headers = {
             'Content-Type': 'application/json',
-            'X-Tenant-ID': getTenant(),
+            'X-Tenant-Id': getTenantId(),
             ...options.headers,
         };
 
@@ -99,17 +98,12 @@ const AegisAPI = (() => {
             response = await fetch(primaryUrl, config);
             _activeHost = primaryHost;
         } catch (primaryErr) {
-            if (primaryErr.name === 'TypeError' && primaryErr.message.includes('fetch')) {
-                // Try fallback host (localhost <-> 127.0.0.1)
-                try {
-                    response = await fetch(fallbackUrl, config);
-                    _activeHost = fallbackHost;
-                } catch (fallbackErr) {
-                    _updateConnection(false);
-                    throw new Error(`Cannot connect to AEGIS backend at ${primaryUrl}. Is the server running?`);
-                }
-            } else {
-                throw primaryErr;
+            try {
+                response = await fetch(fallbackUrl, config);
+                _activeHost = fallbackHost;
+            } catch (fallbackErr) {
+                _updateConnection(false);
+                throw new Error(`Cannot connect to AEGIS backend at ${primaryUrl}. Is the server running?`);
             }
         }
 
@@ -158,8 +152,9 @@ const AegisAPI = (() => {
     return {
         setToken,
         getToken,
-        getTenant,
-        setTenant,
+        setTenantId,
+        getTenantId,
+        setTenantChangeCallback,
         isAuthenticated,
         setConnectionCallback,
         healthCheck,

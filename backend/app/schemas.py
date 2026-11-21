@@ -4,6 +4,9 @@ from pydantic import BaseModel, Field, EmailStr
 
 # --- Ingestion Metadata Payload Schema (Strict Field Allow-Listing) ---
 class MetadataPayload(BaseModel):
+    class Config:
+        extra = "forbid"
+
     payload_id: str = Field(..., description="Unique UUID for idempotency")
     tenant_id: str = Field(..., description="Organization tenant identifier")
     source_id: str = Field(..., description="Pseudonymous host or source identifier")
@@ -17,6 +20,16 @@ class MetadataPayload(BaseModel):
     throughput_kbps: Optional[float] = 0.0
     bytes_sent: Optional[float] = 0.0
     bytes_recv: Optional[float] = 0.0
+    upload_kbps: Optional[float] = 0.0
+    download_kbps: Optional[float] = 0.0
+    disk_read_kbps: Optional[float] = 0.0
+    disk_write_kbps: Optional[float] = 0.0
+    disk_iops: Optional[float] = 0.0
+    cpu_freq_mhz: Optional[float] = 0.0
+    swap_percent: Optional[float] = 0.0
+    battery_percent: Optional[float] = None
+    load_avg_1m: Optional[float] = 0.0
+    top_processes: Optional[List[Dict[str, Any]]] = None
     local_anomalies: Optional[List[Dict[str, Any]]] = None
     health_state: str = Field("Good", pattern="^(Excellent|Good|Fair|Poor)$")
     event_category: str = "Performance"
@@ -28,6 +41,9 @@ class MetadataPayload(BaseModel):
     approved_fields: Optional[List[str]] = None
     redacted_fields: Optional[List[str]] = None
     exact_transmitted_json: Optional[str] = None
+
+# Layer A1: Canonical AllowedPayload specification
+AllowedPayload = MetadataPayload
 
 class IngestionAck(BaseModel):
     status: str
@@ -150,6 +166,7 @@ class EgressProofOut(BaseModel):
     approved_fields: List[str]
     redacted_fields: List[str]
     applied_policy: str
+    raw_local_log_blocked: Optional[str] = None
     exact_transmitted_json: str
     payload_hash: str
     transmission_status: str
@@ -215,3 +232,4 @@ class DashboardSummary(BaseModel):
     simulated: bool = False
     maturity_stage: str = "Stage 1: Ingest"
     host_status: str = "Configured Host"
+    metrics_history: Optional[List[Dict[str, Any]]] = None

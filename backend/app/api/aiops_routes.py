@@ -109,3 +109,97 @@ async def get_pipeline_status(current_user: User = Depends(get_current_user)):
         "recommend": {"status": "Active", "description": "Transparent evidence-backed remediation suggestions"},
         "act": {"status": "Human-Approved", "description": "Safe recovery simulation sandbox with policy audit & rollback"}
     }
+
+from pydantic import BaseModel
+from typing import Optional, Dict, Any
+
+class CopilotChatRequest(BaseModel):
+    message: str
+    include_telemetry: bool = True
+
+@router.post("/copilot/chat")
+async def copilot_chat(
+    req: CopilotChatRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    AI Copilot chat endpoint powered by Google Gemini (gemini-3.8-flash).
+    Provides real-time answers grounded in the host's actual Windows telemetry.
+    """
+    telemetry_context = {}
+    if req.include_telemetry:
+        latest_stmt = (
+            select(MetricRecord)
+            .where(MetricRecord.tenant_id == current_user.tenant_id)
+            .order_by(desc(MetricRecord.timestamp_utc))
+            .limit(5)
+        )
+        recent_records = (await db.execute(latest_stmt)).scalars().all()
+        if recent_records:
+            latest = recent_records[0]
+            telemetry_context = {
+                "source": latest.source_id,
+                "cpu_usage_pct": latest.cpu_usage,
+                "memory_usage_pct": latest.memory_usage,
+                "disk_usage_pct": latest.disk_usage,
+                "latency_ms": latest.latency_ms,
+                "health_state": latest.health_state,
+                "timestamp": latest.timestamp_utc.isoformat() if latest.timestamp_utc else None
+            }
+
+    ai_reply = aiops_engine.explanation_engine.ask_copilot(
+        question=req.message,
+        telemetry_context=telemetry_context
+    )
+
+    return {
+        "reply": ai_reply,
+        "model": aiops_engine.explanation_engine.model_name,
+        "grounded_telemetry": telemetry_context,
+        "tenant_id": current_user.tenant_id
+    }
+
+@router.post("/incidents/{incident_id}/ai-analysis")
+async def incident_ai_analysis(
+    incident_id: str,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    """
+    Generates an on-demand Gemini AI root cause analysis for a specific incident.
+    """
+    stmt = select(Incident).where(
+        Incident.tenant_id == current_user.tenant_id,
+        Incident.incident_id == incident_id
+    )
+    inc = (await db.execute(stmt)).scalar_one_or_none()
+    if not inc:
+        return {"error": "Incident not found"}
+
+    try:
+        rel_alerts = json.loads(inc.related_alerts) if isinstance(inc.related_alerts, str) else inc.related_alerts
+    except:
+        rel_alerts = []
+    try:
+        aff_cols = json.loads(inc.affected_collectors) if isinstance(inc.affected_collectors, str) else inc.affected_collectors
+    except:
+        aff_cols = []
+
+    ai_analysis = aiops_engine.explanation_engine.generate_ai_explanation({
+        "incident_id": inc.incident_id,
+        "title": inc.title,
+        "severity": inc.severity,
+        "likely_cause": inc.likely_cause,
+        "recommended_investigation": inc.recommended_investigation,
+        "confidence": inc.confidence,
+        "related_alerts": rel_alerts,
+        "affected_collectors": aff_cols
+    })
+
+    return {
+        "incident_id": incident_id,
+        "ai_analysis": ai_analysis,
+        "model": aiops_engine.explanation_engine.model_name
+    }
+

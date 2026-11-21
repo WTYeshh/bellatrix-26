@@ -7,7 +7,7 @@ from collector.privacy.engine import PrivacyEngine
 from collector.privacy.proof import EgressProofGenerator
 
 def test_collector_metrics_collection():
-    """TEST: Real telemetry is gathered by psutil without mock."""
+    """TEST: Real telemetry is gathered by psutil without simulation."""
     source = SystemMetricsSource()
     metrics = source.collect()
 
@@ -26,7 +26,7 @@ def test_privacy_strict_allow_list_enforcement():
     engine = PrivacyEngine()
     raw_telemetry = {
         "payload_id": "TEST_001",
-        "tenant_id": "ORG_001",
+        "tenant_id": "default",
         "source_id": "NODE_1234",
         "cpu_usage": 45.0,
         "memory_usage": 60.0,
@@ -68,7 +68,7 @@ def test_egress_proof_sha256_verification():
     proof_gen = EgressProofGenerator()
     payload = {
         "payload_id": "PAYLOAD_ABC_123",
-        "tenant_id": "ORG_001",
+        "tenant_id": "default",
         "source_id": "NODE_99",
         "timestamp_utc": "2026-11-20T12:00:00Z",
         "cpu_usage": 88.5,
@@ -99,7 +99,7 @@ def test_fail_closed_privacy_gate_blocks_transmission():
     # 1. Unapproved key escaping into payload
     corrupt_payload = {
         "payload_id": "TEST_LEAK",
-        "tenant_id": "ORG_001",
+        "tenant_id": "default",
         "source_id": "NODE_LEAK",
         "cpu_usage": 50.0,
         "raw_leaked_password": "PlaintextPassword123"
@@ -111,7 +111,7 @@ def test_fail_closed_privacy_gate_blocks_transmission():
     # 2. Unredacted credential pattern escaping into string field
     unredacted_payload = {
         "payload_id": "TEST_LEAK_2",
-        "tenant_id": "ORG_001",
+        "tenant_id": "default",
         "source_id": "NODE_LEAK_2",
         "cpu_usage": 50.0,
         "event_category": "Failed login password=SecretPassword123"

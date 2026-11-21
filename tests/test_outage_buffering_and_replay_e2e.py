@@ -3,7 +3,6 @@ import uuid
 import json
 import datetime
 import pytest
-from unittest.mock import patch, MagicMock
 
 from collector.main import Tier1Collector
 from collector.storage.local_db import LocalCollectorStorage
@@ -31,7 +30,9 @@ async def test_end_to_end_outage_buffering_and_replay():
     collector.storage = LocalCollectorStorage(db_path=TEST_DB_PATH)
 
     # 2. SIMULATE BACKEND OUTAGE: SaaS client fails
-    with patch.object(collector.client, "send_metadata", return_value=(False, {"error": "ConnectionRefused"})):
+    orig_send = collector.client.send_metadata
+    collector.client.send_metadata = lambda payload: (False, {"error": "ConnectionRefused"})
+    try:
         # Run 3 collection cycles during outage
         results = []
         for i in range(3):
@@ -50,13 +51,15 @@ async def test_end_to_end_outage_buffering_and_replay():
         for pr in proofs:
             assert pr["status"] == "Buffered"
             assert pr["payload_hash"] is not None
+    finally:
+        collector.client.send_metadata = orig_send
 
     print("✅ Step 1: Outage detected, 3 records buffered locally, proofs marked 'Buffered'.")
 
     # 3. SIMULATE BACKEND RECOVERY: Collector drains outbox
     ingested_payloads = []
 
-    async def mock_backend_ingest(payload):
+    async def drain_backend_ingest(payload):
         ingested_payloads.append(payload)
         async with AsyncSessionLocal() as session:
             ack = await process_ingestion_payload(payload, session)
@@ -70,7 +73,7 @@ async def test_end_to_end_outage_buffering_and_replay():
     for item in pending_items:
         payload = item["payload"]
         payload_id = item["payload_id"]
-        ok, ack = await mock_backend_ingest(payload)
+        ok, ack = await drain_backend_ingest(payload)
         assert ok is True
         assert ack["status"] == "Delivered"
         assert ack["duplicate"] is False

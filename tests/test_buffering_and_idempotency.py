@@ -93,12 +93,12 @@ async def test_collector_heartbeat_and_stale_detection():
     """TEST: Collector heartbeat updates and stale detection (>45s marks collector Offline)."""
     import datetime
     from httpx import AsyncClient, ASGITransport
-    from backend.app.main import app, seed_initial_data
+    from backend.app.main import app, init_server_identity
     from backend.app.models import Collector
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    await seed_initial_data()
+    await init_server_identity()
 
     now_utc = datetime.datetime.now(datetime.timezone.utc)
     stale_time = now_utc - datetime.timedelta(seconds=55)
@@ -106,10 +106,10 @@ async def test_collector_heartbeat_and_stale_detection():
     cid_stale = f"COL_STL_{uuid.uuid4().hex[:6]}"
 
     async with AsyncSessionLocal() as session:
-        # Seed an active collector and a stale collector
+        # Register an active collector and a stale collector
         c_active = Collector(
             collector_id=cid_active,
-            tenant_id="ORG_001",
+            tenant_id="default",
             host_identifier="win-host-active",
             version="1.0.0",
             status="Online",
@@ -121,7 +121,7 @@ async def test_collector_heartbeat_and_stale_detection():
         )
         c_stale = Collector(
             collector_id=cid_stale,
-            tenant_id="ORG_001",
+            tenant_id="default",
             host_identifier="win-host-stale",
             version="1.0.0",
             status="Online",  # DB says Online, but last heartbeat was 55s ago!
@@ -137,7 +137,7 @@ async def test_collector_heartbeat_and_stale_detection():
 
     transport = ASGITransport(app=app)
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
-        resp = await ac.get("/api/v1/collectors", headers={"Authorization": "Bearer demo-token"})
+        resp = await ac.get("/api/v1/collectors", headers={"Authorization": "Bearer aegis-session-token"})
         assert resp.status_code == 200
         cols = {c["collector_id"]: c for c in resp.json()}
 
