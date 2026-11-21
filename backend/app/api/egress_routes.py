@@ -14,6 +14,8 @@ from backend.app.auth.security import get_current_user
 router = APIRouter(prefix="/egress-proof", tags=["Egress Proof"])
 
 @router.get("", response_model=List[EgressProofOut])
+@router.get("/", response_model=List[EgressProofOut])
+@router.get("/proofs", response_model=List[EgressProofOut])
 async def list_egress_proofs(
     current_user: User = Depends(get_current_user),
     limit: int = 50,
@@ -58,6 +60,8 @@ async def list_egress_proofs(
             tenant_id=r.tenant_id,
             source_id=r.source_id,
             timestamp_utc=r.timestamp_utc.isoformat() if r.timestamp_utc else "",
+            raw_local_log_blocked=r.raw_local_log_blocked,
+            sanitized_saas_payload=r.exact_transmitted_json,
             approved_fields=app_fields,
             redacted_fields=red_fields,
             applied_policy=r.applied_policy,

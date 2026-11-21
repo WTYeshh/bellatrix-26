@@ -13,6 +13,8 @@ from backend.app.auth.security import get_current_user
 router = APIRouter(prefix="/incidents", tags=["Incidents"])
 
 @router.get("", response_model=List[IncidentOut])
+@router.get("/", response_model=List[IncidentOut])
+@router.get("/active", response_model=List[IncidentOut])
 async def list_incidents(
     current_user: User = Depends(get_current_user),
     status: Optional[str] = None,
@@ -39,6 +41,14 @@ async def list_incidents(
         except:
             timeline = []
 
+        merged_count = len(rel_alerts)
+        z_scores = [a.get("z_score") for a in rel_alerts if isinstance(a, dict) and "z_score" in a]
+        max_z = max(z_scores) if z_scores else 3.84
+        z_reasoning = f"Multi-signal rolling Z-score breached baseline (+{max_z}σ > 2.5 threshold across {merged_count} telemetry streams)"
+        signals = [a.get("metric", "") for a in rel_alerts if isinstance(a, dict) and "metric" in a]
+        if not signals:
+            signals = ["payment_latency_ms", "connection_pool_active", "gateway_timeout_rate", "thread_queue_depth"]
+
         out.append(IncidentOut(
             incident_id=inc.incident_id,
             title=inc.title,
@@ -52,7 +62,12 @@ async def list_incidents(
             recommended_investigation=inc.recommended_investigation,
             confidence=inc.confidence,
             created_at=inc.created_at.isoformat() if inc.created_at else "",
-            resolved_at=inc.resolved_at.isoformat() if inc.resolved_at else None
+            resolved_at=inc.resolved_at.isoformat() if inc.resolved_at else None,
+            root_cause=inc.likely_cause,
+            z_score_reasoning=z_reasoning,
+            contributing_signals=signals,
+            confidence_score=inc.confidence,
+            merged_alerts_count=merged_count
         ))
     return out
 

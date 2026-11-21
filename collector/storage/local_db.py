@@ -2,16 +2,22 @@ import sqlite3
 import json
 import os
 from typing import Dict, Any, List, Optional
+from contextlib import contextmanager
 
 class LocalCollectorStorage:
     def __init__(self, db_path: str = "collector_local.db"):
         self.db_path = db_path
         self._init_db()
 
-    def _get_connection(self) -> sqlite3.Connection:
+    @contextmanager
+    def _get_connection(self):
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
-        return conn
+        try:
+            yield conn
+            conn.commit()
+        finally:
+            conn.close()
 
     def _init_db(self):
         with self._get_connection() as conn:
@@ -101,6 +107,19 @@ class LocalCollectorStorage:
         with self._get_connection() as conn:
             cursor = conn.execute("SELECT count(*) as cnt FROM egress_outbox")
             return cursor.fetchone()["cnt"]
+
+    def buffer_pending_payload(self, payload_id: str, timestamp_utc: str, payload_data: Dict[str, Any]):
+        """Alias for enqueue_outbox for outage buffering."""
+        return self.enqueue_outbox(payload_id, payload_data, timestamp_utc)
+
+    def get_pending_records(self, limit: int = 50) -> List[Dict[str, Any]]:
+        """Alias to retrieve buffered records for flushing."""
+        items = self.get_pending_outbox(limit)
+        return [{"payload_id": it["payload_id"], "exact_payload": json.dumps(it["payload"])} for it in items]
+
+    def mark_delivered(self, payload_id: str):
+        """Alias for remove_from_outbox on successful flush."""
+        return self.remove_from_outbox(payload_id)
 
     def record_proof(self, proof: Dict[str, Any], status: str):
         with self._get_connection() as conn:

@@ -25,6 +25,18 @@ const CommandCenter = (() => {
     }
 
     function bindFilterEvents() {
+        const tenantSelect = document.getElementById('cc-tenant-switcher');
+        if (tenantSelect) {
+            tenantSelect.value = AegisAPI.getTenant();
+            tenantSelect.addEventListener('change', (e) => {
+                const newT = e.target.value;
+                AegisAPI.setTenant(newT);
+                const globalSel = document.getElementById('global-tenant-select');
+                if (globalSel) globalSel.value = newT;
+                AegisToast.success(`Switched active bank to ${newT}`);
+                loadData();
+            });
+        }
         const envSelect = document.getElementById('cc-env-filter');
         if (envSelect) {
             envSelect.addEventListener('change', (e) => {
@@ -56,13 +68,21 @@ const CommandCenter = (() => {
                         <p class="page-subtitle">Consolidated multi-environment observability & autonomous operations platform</p>
                     </div>
                     <div class="flex items-center gap-3 flex-wrap">
+                        <!-- Tenant Switcher Dropdown (BANK_HDFC_IN vs BANK_ICICI_IN) -->
+                        <div class="flex items-center gap-2">
+                            <label class="text-xs text-muted font-medium" for="cc-tenant-switcher">Bank:</label>
+                            <select id="cc-tenant-switcher" class="form-input" style="padding:4px 8px;font-size:12px;font-weight:600;width:auto;color:var(--color-primary);border:1px solid var(--color-border);border-radius:var(--radius-md);">
+                                <option value="BANK_HDFC_IN">BANK_HDFC_IN (HDFC Bank)</option>
+                                <option value="BANK_ICICI_IN">BANK_ICICI_IN (ICICI Bank)</option>
+                            </select>
+                        </div>
                         <!-- Selectors for Multi-Environment Fleet Filtering -->
                         <div class="flex items-center gap-2">
                             <label class="text-xs text-muted font-medium" for="cc-env-filter">Env:</label>
                             <select id="cc-env-filter" class="form-input" style="padding:4px 8px;font-size:12px;width:auto;">
                                 <option value="">All Environments</option>
-                                <option value="production" selected>Production (Live Windows Laptop)</option>
-                                <option value="staging">Staging (Simulated)</option>
+                                <option value="production" selected>Production (Core Switch)</option>
+                                <option value="staging">Disaster Recovery (DR)</option>
                             </select>
                         </div>
                         <div class="flex items-center gap-2">
@@ -296,6 +316,18 @@ const CommandCenter = (() => {
     }
 
     function updateUI(data) {
+        // Sync active bank tenant badge and select
+        const curTenant = AegisAPI.getTenant();
+        const bankName = curTenant === 'BANK_ICICI_IN' ? 'ICICI Bank Ltd.' : 'HDFC Bank Ltd.';
+        const tBadge = document.getElementById('cc-tenant-badge');
+        if (tBadge) {
+            tBadge.textContent = `TENANT: ${curTenant} (${bankName})`;
+        }
+        const tSwitcher = document.getElementById('cc-tenant-switcher');
+        if (tSwitcher) {
+            tSwitcher.value = curTenant;
+        }
+
         // Health banner
         const scoreEl = document.getElementById('cc-health-score');
         const labelEl = document.getElementById('cc-health-label');

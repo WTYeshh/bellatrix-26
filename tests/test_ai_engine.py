@@ -352,8 +352,11 @@ def test_tenant_isolation_enforcement():
 def test_saas_outage_buffering():
     """Collector stores payloads in SQLite outbox during simulated SaaS outage."""
     test_db = "test_saas_outage_buffer.db"
-    if os.path.exists(test_db):
-        os.remove(test_db)
+    try:
+        if os.path.exists(test_db):
+            os.remove(test_db)
+    except Exception:
+        pass
         
     storage = LocalCollectorStorage(db_path=test_db)
     
@@ -370,8 +373,11 @@ def test_saas_outage_buffering():
         storage.remove_from_outbox(it["payload_id"])
         
     assert storage.count_pending() == 0
-    if os.path.exists(test_db):
-        os.remove(test_db)
+    try:
+        if os.path.exists(test_db):
+            os.remove(test_db)
+    except Exception:
+        pass
 
 
 # -------------------------------------------------------------

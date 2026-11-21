@@ -40,13 +40,13 @@ class IngestionAck(BaseModel):
 
 # --- Authentication Schemas ---
 class LoginRequest(BaseModel):
-    email: EmailStr
+    email: str
     password: str
 
 class RegisterRequest(BaseModel):
     org_name: str
     admin_name: str
-    admin_email: EmailStr
+    admin_email: str
     password: str
     region: Optional[str] = "us-east-1"
     timezone: Optional[str] = "UTC"
@@ -83,10 +83,12 @@ class CollectorOut(BaseModel):
     collector_id: str
     tenant_id: str
     host_identifier: str
+    collector_name: Optional[str] = None
     version: str
     status: str
     last_heartbeat: str
     pending_buffered: int
+    local_buffer_queue_size: Optional[int] = None
     cpu_usage: float
     memory_usage: float
     os_info: str
@@ -120,6 +122,11 @@ class IncidentOut(BaseModel):
     confidence: float
     created_at: str
     resolved_at: Optional[str]
+    root_cause: Optional[str] = None
+    z_score_reasoning: Optional[str] = None
+    contributing_signals: Optional[List[str]] = None
+    confidence_score: Optional[float] = None
+    merged_alerts_count: Optional[int] = None
 
 # --- Recommendation Schemas ---
 class RecommendationOut(BaseModel):
@@ -138,6 +145,8 @@ class EgressProofOut(BaseModel):
     tenant_id: str
     source_id: str
     timestamp_utc: str
+    raw_local_log_blocked: Optional[str] = None
+    sanitized_saas_payload: Optional[str] = None
     approved_fields: List[str]
     redacted_fields: List[str]
     applied_policy: str
@@ -162,6 +171,14 @@ class RecoveryActionRequest(BaseModel):
     recommendation_text: str
     approver: str
 
+class RecoveryApproveRequest(BaseModel):
+    simulation_id: str
+    approver: Optional[str] = "Admin / SecOps Officer"
+
+class RecoveryRollbackRequest(BaseModel):
+    simulation_id: str
+    reason: Optional[str] = "Operator requested rollback"
+
 class RecoveryActionOut(BaseModel):
     simulation_id: str
     incident_id: str
@@ -180,6 +197,9 @@ class DashboardSummary(BaseModel):
     states: Dict[str, int]
     collectors_online: int
     collectors_offline: int
+    collectors_total: Optional[int] = None
+    tenant_id: Optional[str] = None
+    tenant_name: Optional[str] = None
     active_incidents: int
     incidents_24h: int
     security_alerts: int

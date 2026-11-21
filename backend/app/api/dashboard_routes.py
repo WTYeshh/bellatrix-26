@@ -44,12 +44,14 @@ async def get_dashboard_summary(
     for c in collectors:
         if c.last_heartbeat:
             delta = (now_utc - c.last_heartbeat.replace(tzinfo=datetime.timezone.utc if not c.last_heartbeat.tzinfo else None)).total_seconds()
-            if delta <= settings.COLLECTOR_OFFLINE_THRESHOLD_SECONDS and c.status == "Online":
+            if delta <= 60.0 and c.status == "Online":
                 online_count += 1
             else:
                 offline_count += 1
+                c.status = "Offline"
         else:
             offline_count += 1
+            c.status = "Offline"
 
     # 2. Latest metrics per source
     met_stmt = (
@@ -78,6 +80,10 @@ async def get_dashboard_summary(
         # If no collectors yet, default clean good state
         states = {"excellent": 1, "good": 0, "fair": 0, "poor": 0}
 
+    # Downgrade to Poor if any collector is offline (> 60s missed heartbeat)
+    if offline_count > 0:
+        states["poor"] += offline_count
+
     # Overall health score calculation (0 - 100)
     total_sources = sum(states.values())
     health_score = 100
@@ -85,7 +91,10 @@ async def get_dashboard_summary(
         penalty = (states["fair"] * 15) + (states["poor"] * 35)
         health_score = max(20, 100 - int(penalty / total_sources))
 
-    if health_score >= 88:
+    if offline_count > 0:
+        overall_health = "Poor"
+        health_score = min(health_score, 45)
+    elif health_score >= 88:
         overall_health = "Excellent"
     elif health_score >= 70:
         overall_health = "Good"
@@ -176,12 +185,21 @@ async def get_dashboard_summary(
     else:
         maturity_stage = "Stage 0: Unconfigured"
 
+    # 7. Organization lookup for tenant name
+    from backend.app.models import Organization
+    org_res = await db.execute(select(Organization).where(Organization.tenant_id == current_user.tenant_id))
+    org_obj = org_res.scalar_one_or_none()
+    tenant_name = org_obj.name if org_obj else current_user.tenant_id
+
     return DashboardSummary(
         health_state=overall_health,
         health_score=health_score,
         states=states,
         collectors_online=online_count,
         collectors_offline=offline_count,
+        collectors_total=len(collectors),
+        tenant_id=current_user.tenant_id,
+        tenant_name=tenant_name,
         active_incidents=len(active_incidents),
         incidents_24h=len(incidents),
         security_alerts=len(sec_alerts),

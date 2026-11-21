@@ -99,6 +99,7 @@ class EgressProof(Base):
     tenant_id = Column(String(64), ForeignKey("organizations.tenant_id"), index=True, nullable=False)
     source_id = Column(String(64), index=True, nullable=False)
     timestamp_utc = Column(DateTime(timezone=True), index=True, nullable=False)
+    raw_local_log_blocked = Column(Text, nullable=True) # Pre-scrubbed local log containing sensitive PII
     approved_fields = Column(Text, nullable=False)   # JSON array of approved strings
     redacted_fields = Column(Text, nullable=False)   # JSON array of redacted/dropped strings
     applied_policy = Column(String(64), default="Standard-v1")

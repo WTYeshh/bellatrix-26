@@ -194,6 +194,19 @@ const AegisApp = (() => {
             };
         });
 
+        // Global Tenant Switcher
+        const tenantSelect = document.getElementById('global-tenant-select');
+        if (tenantSelect) {
+            tenantSelect.value = AegisAPI.getTenant();
+            tenantSelect.onchange = (e) => {
+                const newTenant = e.target.value;
+                AegisAPI.setTenant(newTenant);
+                AegisToast.success(`Switched active tenant to ${newTenant}`);
+                const curPage = AegisRouter.getCurrentPage() || 'command-center';
+                AegisRouter.navigate(curPage);
+            };
+        }
+
         // Logout
         const logoutBtn = document.getElementById('sidebar-logout');
         if (logoutBtn) {
@@ -212,37 +225,47 @@ const AegisApp = (() => {
             updateBreadcrumb(path);
         });
 
-        // Register all page modules
+        // 8 Consolidated Functional Routes
         AegisRouter.register('command-center', (el) => CommandCenter.render(el));
-        AegisRouter.register('infrastructure', (el) => InfraMonitoring.render(el));
-        AegisRouter.register('network', (el) => NetworkMonitoring.render(el));
-        AegisRouter.register('security', (el) => SecurityMonitoring.render(el));
+        AegisRouter.register('telemetry-security', (el) => TelemetrySecurityModule.render(el));
         AegisRouter.register('collectors', (el) => CollectorManagement.render(el));
-        AegisRouter.register('incident-dna', (el) => IncidentDNA.render(el));
-        AegisRouter.register('ai-insights', (el) => AIInsights.render(el));
-        AegisRouter.register('privacy-passport', (el) => PrivacyPassport.render(el));
-        AegisRouter.register('egress-proof', (el) => EgressProof.render(el));
-        AegisRouter.register('audit-center', (el) => AuditCenter.render(el));
+        AegisRouter.register('aiops-incidents', (el) => AIOpsIncidentsModule.render(el));
         AegisRouter.register('recovery-simulator', (el) => RecoverySimulator.render(el));
-        AegisRouter.register('demo-controls', (el) => DemoControls.render(el));
-        AegisRouter.register('settings', (el) => OrgSettings.render(el));
+        AegisRouter.register('egress-proof', (el) => EgressProofModule.render(el));
+        AegisRouter.register('audit-policies', (el) => AuditPoliciesModule.render(el));
+        AegisRouter.register('demo-settings', (el) => DemoSettingsModule.render(el));
+
+        // Backwards-compatibility aliases
+        AegisRouter.register('infrastructure', () => AegisRouter.navigate('telemetry-security'));
+        AegisRouter.register('network', () => AegisRouter.navigate('telemetry-security'));
+        AegisRouter.register('security', () => AegisRouter.navigate('telemetry-security'));
+        AegisRouter.register('incident-dna', () => AegisRouter.navigate('aiops-incidents'));
+        AegisRouter.register('ai-insights', () => AegisRouter.navigate('aiops-incidents'));
+        AegisRouter.register('privacy-passport', () => AegisRouter.navigate('audit-policies'));
+        AegisRouter.register('audit-center', () => AegisRouter.navigate('audit-policies'));
+        AegisRouter.register('demo-controls', () => AegisRouter.navigate('demo-settings'));
+        AegisRouter.register('settings', () => AegisRouter.navigate('demo-settings'));
     }
 
     function updateBreadcrumb(path) {
         const pageNames = {
             'command-center': 'Command Center',
-            'infrastructure': 'Infrastructure',
-            'network': 'Network',
-            'security': 'Security',
+            'telemetry-security': 'Telemetry & Security',
             'collectors': 'Collectors',
-            'incident-dna': 'Incident DNA',
-            'ai-insights': 'AI Insights',
-            'privacy-passport': 'Privacy Passport',
-            'egress-proof': 'Egress Proof',
-            'audit-center': 'Audit Center',
+            'aiops-incidents': 'AIOps Incidents',
             'recovery-simulator': 'Recovery Simulator',
-            'demo-controls': 'AI Demo Controls',
-            'settings': 'Settings',
+            'egress-proof': 'Egress Proof',
+            'audit-policies': 'Audit & Policies',
+            'demo-settings': 'Demo Controls & Settings',
+            'infrastructure': 'Telemetry & Security',
+            'network': 'Telemetry & Security',
+            'security': 'Telemetry & Security',
+            'incident-dna': 'AIOps Incidents',
+            'ai-insights': 'AIOps Incidents',
+            'privacy-passport': 'Audit & Policies',
+            'audit-center': 'Audit & Policies',
+            'demo-controls': 'Demo Controls & Settings',
+            'settings': 'Demo Controls & Settings',
         };
 
         const el = document.getElementById('breadcrumb');

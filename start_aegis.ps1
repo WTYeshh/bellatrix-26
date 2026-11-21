@@ -1,4 +1,4 @@
-# ==============================================================================
+﻿# ==============================================================================
 # AEGIS Privacy-First AIOps Observability SaaS — Master Startup Script
 # Starts: 1. FastAPI Backend (8000) -> 2. Tier 1 Collector -> 3. Frontend (3000)
 # ==============================================================================
@@ -29,9 +29,9 @@ try {
     exit 1
 }
 
-# 2. Check/kill existing lingering processes on port 8000 and 3000
-Write-Host "[CHECK] Checking existing process bindings on ports 8000 and 3000..." -ForegroundColor Gray
-$connections = Get-NetTCPConnection -LocalPort 8000, 3000 -ErrorAction SilentlyContinue
+# 2. Check/kill existing lingering processes on port 8000, 8001, and 3000
+Write-Host "[CHECK] Checking existing process bindings on ports 8000, 8001, and 3000..." -ForegroundColor Gray
+$connections = Get-NetTCPConnection -LocalPort 8000, 8001, 3000 -ErrorAction SilentlyContinue
 foreach ($conn in $connections) {
     if ($conn.OwningProcess -and $conn.OwningProcess -ne 0) {
         Write-Host "  -> Terminating prior process PID $($conn.OwningProcess) on port $($conn.LocalPort)..." -ForegroundColor Yellow
@@ -75,12 +75,12 @@ if (-not $backendReady) {
     exit 1
 }
 
-# 4. Start Real Windows Python Collector
-Write-Host "`n[2/3] Launching Tier 1 Windows psutil Collector..." -ForegroundColor Cyan
+# 4. Start Real Windows Python Collector (Port 8001)
+Write-Host "`n[2/3] Launching Tier 1 Windows Bank Collector on http://127.0.0.1:8001..." -ForegroundColor Cyan
 $collectorOut = Join-Path $rootPath "collector_out.log"
 $collectorErr = Join-Path $rootPath "collector_err.log"
 $collectorProcess = Start-Process -FilePath $pythonCmd `
-    -ArgumentList "-m collector.main" `
+    -ArgumentList "-m uvicorn collector.server:app --host 0.0.0.0 --port 8001" `
     -WorkingDirectory $rootPath `
     -RedirectStandardOutput $collectorOut `
     -RedirectStandardError $collectorErr `
@@ -91,17 +91,12 @@ Write-Host "  -> Collector process spawned (PID $($collectorProcess.Id)). Log: $
 # Wait for collector initial cycle
 Start-Sleep -Seconds 3
 try {
-    $colCheck = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/v1/collectors" `
-        -Headers @{ Authorization = "Bearer demo-token" } `
-        -Method Get -TimeoutSec 2 -ErrorAction Stop
-    $onlineCols = $colCheck | Where-Object { $_.status -eq "Online" }
-    if ($onlineCols) {
-        Write-Host "  ✅ Collector registered & ONLINE! Monitored host: $($onlineCols[0].host_identifier)" -ForegroundColor Green
-    } else {
-        Write-Host "  -> Collector initializing initial heartbeat..." -ForegroundColor Yellow
+    $colHealth = Invoke-RestMethod -Uri "http://127.0.0.1:8001/health" -Method Get -TimeoutSec 2 -ErrorAction SilentlyContinue
+    if ($colHealth.status) {
+        Write-Host "  ✅ Collector Port 8001 ONLINE! Collector ID: $($colHealth.collector_id) (Tenant: $($colHealth.tenant_id))" -ForegroundColor Green
     }
 } catch {
-    Write-Host "  -> Collector heartbeat pending initial registration..." -ForegroundColor Yellow
+    Write-Host "  -> Collector initializing on port 8001..." -ForegroundColor Yellow
 }
 
 # 5. Start Frontend HTTP Server (Port 3000)
@@ -126,8 +121,10 @@ Write-Host "====================================================================
 Write-Host ""
 Write-Host "  🌐 Web Dashboard:    http://localhost:3000" -ForegroundColor White
 Write-Host "                       http://127.0.0.1:3000" -ForegroundColor White
-Write-Host "  🔐 Login Creds:      admin@aegis.io / aegis2026" -ForegroundColor Yellow
+Write-Host "  🔐 Login Creds:      admin@hdfcbank.com / aegis2026 (or admin@aegis.io / aegis2026)" -ForegroundColor Yellow
+Write-Host "  🏦 Bank Tenants:     BANK_HDFC_IN vs BANK_ICICI_IN" -ForegroundColor Yellow
 Write-Host "  ⚙️  Backend API:      http://127.0.0.1:8000" -ForegroundColor White
+Write-Host "  📡 Tier 1 Collector: http://127.0.0.1:8001/status (Port 8001, 3s loop)" -ForegroundColor White
 Write-Host "  📚 Swagger Docs:     http://127.0.0.1:8000/docs" -ForegroundColor White
 Write-Host "  ❤️  Health Check:     http://127.0.0.1:8000/health" -ForegroundColor White
 Write-Host ""

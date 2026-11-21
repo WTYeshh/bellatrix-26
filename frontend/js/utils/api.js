@@ -23,6 +23,19 @@ const AegisAPI = (() => {
     let _connected = false;
     let _lastHealth = null;
     let _onConnectionChange = null;
+    let _tenant = localStorage.getItem('aegis_tenant') || 'BANK_HDFC_IN';
+
+    function getTenant() {
+        if (!_tenant) {
+            _tenant = localStorage.getItem('aegis_tenant') || 'BANK_HDFC_IN';
+        }
+        return _tenant;
+    }
+
+    function setTenant(t) {
+        _tenant = t;
+        localStorage.setItem('aegis_tenant', t);
+    }
 
     function setToken(token) {
         _token = token;
@@ -63,6 +76,7 @@ const AegisAPI = (() => {
 
         const headers = {
             'Content-Type': 'application/json',
+            'X-Tenant-ID': getTenant(),
             ...options.headers,
         };
 
@@ -144,6 +158,8 @@ const AegisAPI = (() => {
     return {
         setToken,
         getToken,
+        getTenant,
+        setTenant,
         isAuthenticated,
         setConnectionCallback,
         healthCheck,

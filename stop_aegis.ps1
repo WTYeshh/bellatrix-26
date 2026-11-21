@@ -1,11 +1,11 @@
-# ==============================================================================
+﻿# ==============================================================================
 # AEGIS Stop Script — Gracefully stops Backend, Collector, and Frontend
 # ==============================================================================
 
 Write-Host "Stopping AEGIS platform services..." -ForegroundColor Yellow
 
-# Kill ports 8000 and 3000
-$ports = @(8000, 3000)
+# Kill ports 8000, 8001, and 3000
+$ports = @(8000, 8001, 3000)
 foreach ($p in $ports) {
     $connections = Get-NetTCPConnection -LocalPort $p -ErrorAction SilentlyContinue
     foreach ($conn in $connections) {
@@ -16,10 +16,10 @@ foreach ($p in $ports) {
     }
 }
 
-# Kill any python processes running collector.main
+# Kill any python processes running collector
 $procs = Get-WmiObject Win32_Process -Filter "name = 'python.exe'" -ErrorAction SilentlyContinue
 foreach ($p in $procs) {
-    if ($p.CommandLine -like "*collector.main*") {
+    if ($p.CommandLine -like "*collector*") {
         Write-Host "  -> Stopping Collector PID $($p.ProcessId)..." -ForegroundColor Gray
         Stop-Process -Id $p.ProcessId -Force -ErrorAction SilentlyContinue
     }
