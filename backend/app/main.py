@@ -82,7 +82,7 @@ async def seed_initial_data():
                     )
                     session.add(u)
 
-                # 3. Collectors
+                # Collectors from seed + explicit COLLECTOR_MUM_01 and COLLECTOR_BLR_02
                 for c_d in seed_data.get("collectors", []):
                     offset = c_d.get("last_heartbeat_offset_sec", 10)
                     col = Collector(
@@ -101,6 +101,38 @@ async def seed_initial_data():
                         last_delivery_success=now_utc - datetime.timedelta(seconds=offset)
                     )
                     session.add(col)
+
+                # Explicit named collectors for BANK_HDFC_IN
+                session.add(Collector(
+                    collector_id="COLLECTOR_MUM_01",
+                    tenant_id="BANK_HDFC_IN",
+                    host_identifier="node_upi_gw_02",
+                    version="2.4.1",
+                    status="Online",
+                    environment="production",
+                    pending_buffered=0,
+                    cpu_usage=42.5,
+                    memory_usage=64.2,
+                    os_info="Windows Server 2022 Datacenter",
+                    auth_token="aegis-hdfc-collector-token-01",
+                    last_heartbeat=now_utc - datetime.timedelta(seconds=5),
+                    last_delivery_success=now_utc - datetime.timedelta(seconds=5)
+                ))
+                session.add(Collector(
+                    collector_id="COLLECTOR_BLR_02",
+                    tenant_id="BANK_HDFC_IN",
+                    host_identifier="node_core_db_01",
+                    version="2.4.1",
+                    status="Online",
+                    environment="production",
+                    pending_buffered=3,
+                    cpu_usage=28.1,
+                    memory_usage=48.0,
+                    os_info="Windows 11 Enterprise",
+                    auth_token="aegis-hdfc-collector-token-02",
+                    last_heartbeat=now_utc - datetime.timedelta(seconds=75), # >60s to demonstrate status degradation
+                    last_delivery_success=now_utc - datetime.timedelta(seconds=75)
+                ))
 
                 # Legacy collector
                 session.add(Collector(
@@ -228,6 +260,38 @@ async def seed_initial_data():
                     )
                     session.add(m)
 
+                # Explicit nodes for Banking Infrastructure cards (node_upi_gw_02 & node_core_db_01)
+                session.add(MetricRecord(
+                    payload_id="LIVE-HDFC-NODE-UPI-GW-02",
+                    tenant_id="BANK_HDFC_IN",
+                    source_id="node_upi_gw_02",
+                    collector_id="COLLECTOR_MUM_01",
+                    timestamp_utc=now_utc - datetime.timedelta(seconds=2),
+                    cpu_usage=88.5,
+                    memory_usage=76.2,
+                    disk_usage=48.0,
+                    latency_ms=1420.0,
+                    packet_loss_pct=2.4,
+                    health_state="Poor",
+                    event_category="UPI Gateway Latency Breach",
+                    severity="Critical"
+                ))
+                session.add(MetricRecord(
+                    payload_id="LIVE-HDFC-NODE-CORE-DB-01",
+                    tenant_id="BANK_HDFC_IN",
+                    source_id="node_core_db_01",
+                    collector_id="COLLECTOR_BLR_02",
+                    timestamp_utc=now_utc - datetime.timedelta(seconds=15),
+                    cpu_usage=42.0,
+                    memory_usage=68.5,
+                    disk_usage=62.0,
+                    latency_ms=24.0,
+                    packet_loss_pct=0.0,
+                    health_state="Good",
+                    event_category="Core Oracle DB Telemetry",
+                    severity="Low"
+                ))
+
                 await session.commit()
                 print("[AEGIS Backend] Seeded Banking Dataset (BANK_HDFC_IN, BANK_ICICI_IN, INC-2026-089) successfully.")
 
@@ -331,6 +395,8 @@ app.add_middleware(
 @app.get("/health")
 @app.get("/api/health")
 @app.get("/api/v1/health")
+@app.get("/api/v1/system/health")
+@app.get("/system/health")
 async def health_check():
     from sqlalchemy import text
     db_status = "disconnected"
@@ -377,6 +443,12 @@ routers = [
 for r in routers:
     app.include_router(r, prefix="/api")
     app.include_router(r, prefix="/api/v1")
+
+# Explicit aliases for ingestion endpoints
+app.include_router(ingestion_router, prefix="/api/ingest")
+app.include_router(ingestion_router, prefix="/api/v1/ingest")
+app.include_router(ingestion_router, prefix="/api/ingestion")
+app.include_router(ingestion_router, prefix="/api/v1/ingestion")
 
 if __name__ == "__main__":
     import uvicorn

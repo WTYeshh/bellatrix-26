@@ -37,15 +37,20 @@ def main():
     print(f"\n[1] Frontend (Port 3000): HTTP {st}")
     assert st == 200, f"Expected 200, got {st}"
     assert "Command Center" in res
-    assert "Telemetry & Security" in res
+    assert "Infrastructure" in res
+    assert "Network" in res
+    assert "Security" in res
     assert "Collectors" in res
-    assert "AIOps Incidents" in res
+    assert "Incident DNA" in res
+    assert "AI Insights" in res
     assert "Recovery Simulator" in res
+    assert "Privacy Passport" in res
     assert "Egress Proof" in res
-    assert "Audit & Policies" in res
-    assert "Demo Controls & Settings" in res
+    assert "Audit Center" in res
+    assert "AI Demo Controls" in res
+    assert "Settings" in res
     assert "global-tenant-select" in res
-    print("  -> All 8 Sidebar Navigation tabs & Tenant Switcher verified in HTML!")
+    print("  -> All 13 Sidebar Navigation tabs & Tenant Switcher verified in HTML!")
 
     # 2. Central Backend Health (Port 8000)
     st, res = req("http://127.0.0.1:8000/health")

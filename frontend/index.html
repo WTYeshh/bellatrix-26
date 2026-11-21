@@ -200,7 +200,7 @@
             </div>
 
             <nav class="sidebar-nav">
-                <!-- Core Operations -->
+                <!-- Operations -->
                 <div class="nav-section">
                     <div class="nav-section-label">Operations</div>
                     <a class="nav-item active" data-page="command-center" href="#command-center">
@@ -212,12 +212,31 @@
                         </svg>
                         Command Center
                     </a>
-                    <a class="nav-item" data-page="telemetry-security" href="#telemetry-security">
+                    <a class="nav-item" data-page="infrastructure" href="#infrastructure">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                            <path d="m9 12 2 2 4-4"/>
+                            <rect x="2" y="2" width="20" height="8" rx="2" />
+                            <rect x="2" y="14" width="20" height="8" rx="2" />
+                            <line x1="6" y1="6" x2="6.01" y2="6" />
+                            <line x1="6" y1="18" x2="6.01" y2="18" />
                         </svg>
-                        Telemetry & Security
+                        Infrastructure
+                    </a>
+                    <a class="nav-item" data-page="network" href="#network">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="9" y="2" width="6" height="6" rx="1" />
+                            <rect x="16" y="16" width="6" height="6" rx="1" />
+                            <rect x="2" y="16" width="6" height="6" rx="1" />
+                            <path d="M12 8v4" />
+                            <path d="M5 16v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2" />
+                        </svg>
+                        Network
+                    </a>
+                    <a class="nav-item" data-page="security" href="#security">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect x="3" y="11" width="18" height="11" rx="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                        Security
                     </a>
                     <a class="nav-item" data-page="collectors" href="#collectors">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -231,16 +250,23 @@
                     </a>
                 </div>
 
-                <!-- Intelligence & Ops -->
+                <!-- AIOps & Recovery -->
                 <div class="nav-section">
                     <div class="nav-section-label">AIOps & Recovery</div>
-                    <a class="nav-item" data-page="aiops-incidents" href="#aiops-incidents">
+                    <a class="nav-item" data-page="incident-dna" href="#incident-dna">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M2 15c6.667-6 13.333 0 20-6" />
                             <path d="m17 6-2.5-2.5" />
                             <path d="m7 18 2.5 2.5" />
                         </svg>
-                        AIOps Incidents
+                        Incident DNA
+                    </a>
+                    <a class="nav-item" data-page="ai-insights" href="#ai-insights">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M9.5 2A2.5 2.5 0 0 1 12 4.5v15a2.5 2.5 0 0 1-4.96.44 2.5 2.5 0 0 1-2.96-3.08 3 3 0 0 1-.34-5.58 2.5 2.5 0 0 1 1.32-4.24 2.5 2.5 0 0 1 1.98-3A2.5 2.5 0 0 1 9.5 2Z" />
+                            <path d="M14.5 2A2.5 2.5 0 0 0 12 4.5v15a2.5 2.5 0 0 0 4.96.44 2.5 2.5 0 0 0 2.96-3.08 3 3 0 0 0 .34-5.58 2.5 2.5 0 0 0-1.32-4.24 2.5 2.5 0 0 0-1.98-3A2.5 2.5 0 0 0 14.5 2Z" />
+                        </svg>
+                        AI Insights
                     </a>
                     <a class="nav-item" data-page="recovery-simulator" href="#recovery-simulator">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -253,7 +279,14 @@
 
                 <!-- Privacy & Audit -->
                 <div class="nav-section">
-                    <div class="nav-section-label">Privacy & Audit</div>
+                    <div class="nav-section-label">Privacy & Compliance</div>
+                    <a class="nav-item" data-page="privacy-passport" href="#privacy-passport">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+                            <path d="m9 12 2 2 4-4" />
+                        </svg>
+                        Privacy Passport
+                    </a>
                     <a class="nav-item" data-page="egress-proof" href="#egress-proof">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -262,7 +295,7 @@
                         </svg>
                         Egress Proof
                     </a>
-                    <a class="nav-item" data-page="audit-policies" href="#audit-policies">
+                    <a class="nav-item" data-page="audit-center" href="#audit-center">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                             <rect x="8" y="2" width="8" height="4" rx="1" />
                             <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" />
@@ -271,18 +304,25 @@
                             <path d="M8 11h.01" />
                             <path d="M8 16h.01" />
                         </svg>
-                        Audit & Policies
+                        Audit Center
                     </a>
                 </div>
 
                 <!-- Demo & Configuration -->
                 <div class="nav-section">
-                    <div class="nav-section-label">Controls</div>
-                    <a class="nav-item" data-page="demo-settings" href="#demo-settings">
+                    <div class="nav-section-label">Controls & Settings</div>
+                    <a class="nav-item" data-page="demo-controls" href="#demo-controls">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                         </svg>
-                        Demo Controls & Settings
+                        AI Demo Controls
+                    </a>
+                    <a class="nav-item" data-page="settings" href="#settings">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <circle cx="12" cy="12" r="3" />
+                            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                        </svg>
+                        Settings
                     </a>
                 </div>
             </nav>
